@@ -30,7 +30,13 @@ When a subagent reports back:
 3. **Remediate and Rework**: If any partial implementations or regressions remain, the parent agent **MUST immediately rework and fix them** before proceeding.
 4. **Merge and Push to `main`**: All completed and verified work must land directly on `main` and be pushed to `origin/main`.
 
-### 2.2 Execution Directives
+### 2.2 The Mandatory Functional Verification Rule (Every User Request)
+For **every single user request**, the agent **MUST** write and execute an automated functional test verifying the exact feature or fix requested before concluding the turn or presenting results to the user.
+- **Zero Assumptions**: Never assume code or configuration works based solely on static edits, syntax checks, or build passes.
+- **Automated Verification**: Implement and run a test script or harness that exercises the exact functionality end-to-end.
+- **Failure Remediation**: If the test fails or uncovers regressions, diagnose the root cause immediately, fix the implementation, and re-run verification until 100% passing.
+
+### 2.3 Execution Directives
 - **Zero Background Polling**: Never run busy-wait loops, sleep loops, or status-polling scripts in shells or subagents. Rely on reactive system notifications when commands complete.
 - **Always Ship on `main`**: Working trees must be left clean and synchronized with `origin/main`.
 - **Preserve Documentation & Comments**: Maintain existing Japanese Capcom comments and naming conventions. Do not delete explanatory context.
@@ -113,9 +119,11 @@ Every change below must be cleanly implemented in the corresponding C source fil
 
 ### 5.1 Verification Checklist
 Before committing any changes to `main`:
-1. **Compilation Check**:
+1. **Mandatory Functional Test (Per User Request)**:
+   - An automated test specifically verifying the requested functionality must be added/executed and pass 100%.
+2. **Compilation Check**:
    - Code must compile cleanly with `-Werror` compatibility against CodeWarrior and GCC targets without syntax errors or mismatched prototypes.
-2. **Data Structure Integrity**:
+3. **Data Structure Integrity**:
    - Ensure `sizeof(PLW)`, `sizeof(WORK)`, and `sizeof(GAUGE)` offsets remain 100% aligned with PS2 memory maps.
-3. **Feature Cleanliness**:
+4. **Feature Cleanliness**:
    - Wrap modifications with `#ifdef UPPER_3S` / `#ifndef UPPER_3S` guards where appropriate so vanilla matching builds remain reproducible.
