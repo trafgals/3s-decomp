@@ -63,7 +63,11 @@ typedef size_t strlen_t;
 typedef uint8_t u_char;
 typedef uint16_t u_short;
 typedef uint32_t u_int;
+#if !defined(TARGET_PS2) && !defined(__EMSCRIPTEN__)
+// Emscripten's sys/types.h already declares u_long as unsigned long, and
+// redefining it with a different type is an error.
 typedef uint64_t u_long;
+#endif
 
 #endif
 

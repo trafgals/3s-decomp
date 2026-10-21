@@ -6,6 +6,10 @@
 #include "sf33rd/Source/Game/PLPDM.h"
 #include "sf33rd/Source/Game/PLS01.h"
 #include "sf33rd/Source/Game/PLS03.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s.h"
+#include "sf33rd/Source/Game/upper3s_throwtech.h"
+#endif
 
 void nm_01000(PLW* wk);
 void nm_09000(PLW* wk);
@@ -1496,6 +1500,13 @@ void nm_48000(PLW* wk) {
 }
 
 void nm_49000(PLW* wk) {
+#if defined(UPPER_3S)
+    // Third Strike Upper: the character that teched an air throw may not
+    // attack until it has landed again.
+    if (upper3s_throwtech_attack_locked(wk)) {
+        return;
+    }
+#endif
     jumping_cg_type_check(wk);
 }
 
@@ -1809,6 +1820,21 @@ void process_attack(PLW* wk) {
 }
 
 s32 check_cg_cancel_data(PLW* wk) {
+#if defined(UPPER_3S)
+    // Third Strike Upper: the cancels that the design document grants to a
+    // few of the normals. The rules are in upper3s/upper3s_ch_<name>.c and
+    // the one that belongs to the character is chosen here.
+    //
+    // The move is addressed by the kind of character data it lives in (the
+    // slot 4 holds the normal attacks) and by its char_ix, the index of the
+    // move in that kind of data. The routine number of the state machine
+    // cannot be used: it is the behaviour class of the normal, and it is the
+    // same for the standing and for the crouching Medium Punch.
+    //
+    // The hook has to be before the test below, because a move whose mask of
+    // the disc is empty never reaches the tests of the cancels.
+    wk->wu.cg_cancel = upper3s_cancel_mask(wk->player_number, wk->wu.now_koc, wk->as->char_ix, wk->wu.cg_cancel);
+#endif
     if (wk->wu.cg_cancel == 0) {
         return 0;
     }

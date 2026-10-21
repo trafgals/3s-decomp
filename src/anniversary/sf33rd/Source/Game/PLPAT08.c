@@ -46,6 +46,22 @@ void Att_PL08_HEALING(PLW* wk) {
 
         if (pcon_dp_flag == 0) {
             switch (wk->wu.cg_type) {
+#if defined(UPPER_3S)
+            // Third Strike Upper - "increase the rate of health recovery"
+            // of the healing super. The recovery rate of the three strengths
+            // is doubled.
+            case 24:
+                wk->wu.vital_new += 6;
+                break;
+
+            case 22:
+                wk->wu.vital_new += 4;
+                break;
+
+            case 20:
+                wk->wu.vital_new += 2;
+                break;
+#else
             case 24:
                 wk->wu.vital_new += 3;
                 break;
@@ -57,6 +73,7 @@ void Att_PL08_HEALING(PLW* wk) {
             case 20:
                 wk->wu.vital_new += 1;
                 break;
+#endif
             }
         }
 

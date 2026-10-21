@@ -139,7 +139,16 @@ Sint32 adxm_IsSetupThrdEx();
 void adxm_SleepThread();
 void adxm_WakeupThread(Sint32 tid);
 
+// The lock of the middleware is called with the object it was registered
+// with. The retail build calls it directly, where the extra argument is
+// ignored, but the port build resolves the call through the function table
+// of WebAssembly, where the signatures have to match.
+#if defined(TARGET_PS2)
 void _adxm_lock() {
+#else
+void _adxm_lock(void* object) {
+    (void)object;
+#endif
     if (adxm_lock_level == 0) {
         Sint32 tid = GetThreadId();
         adxm_cur_prio = ChangeThreadPriority(tid, adxm_save_tprm[0]);
@@ -155,7 +164,12 @@ void _adxm_lock() {
     adxm_lock_level += 1;
 }
 
+#if defined(TARGET_PS2)
 void _adxm_unlock() {
+#else
+void _adxm_unlock(void* object) {
+    (void)object;
+#endif
     if (--adxm_lock_level == 0) {
         adxm_SuspendThread(adxm_id_safe);
         adxm_id_safe;

@@ -566,7 +566,15 @@ Sint32 isNeedDevName(Char8* device_name) {
     }
 
     if (device->OptFn1 != NULL) {
+#if defined(TARGET_PS2)
         ret = device->OptFn1(0, 0x64, 0, 0);
+#else
+        // The callback of the disc driver takes two arguments, while the
+        // retail code passes four. The retail platform ignores the extra
+        // arguments, but the port build resolves the call through the function
+        // table of WebAssembly, where the signatures have to match.
+        ret = device->OptFn1(0, 0x64);
+#endif
     } else {
         return 0;
     }

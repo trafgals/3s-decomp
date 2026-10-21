@@ -63,7 +63,16 @@ void ADXT_StartSeamless(ADXT adxt) {
         return;
     }
 
+    // The implementation of the stop takes the player it belongs to. The
+    // retail build calls it without one, which does not matter there,
+    // because the call is a direct one. The port build resolves the call
+    // through the function table of WebAssembly, where the signatures have to
+    // match.
+#if defined(TARGET_PS2)
     ADXT_StopWithoutLsc();
+#else
+    ADXT_StopWithoutLsc(adxt);
+#endif
     ADXCRS_Lock();
     adxt_start_sj(adxt, adxt->sjf);
     sj = adxt->sji;
