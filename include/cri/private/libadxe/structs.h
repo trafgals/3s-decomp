@@ -410,7 +410,15 @@ typedef struct {
     /* 0x54 */ void (*unk54)();
     /* 0x58 */ void (*unk58)();
     /* 0x5C */ void (*unk5C)();
+#if defined(TARGET_PS2)
     /* 0x60 */ Sint32 (*OptFn1)();
+#else
+    // The disc driver implements the callback with two arguments. The retail
+    // build declares it without any, which does not matter there, because the
+    // call goes through the function table of WebAssembly in the port build,
+    // where the signatures have to match.
+    /* 0x60 */ Sint32 (*OptFn1)(void*, Sint32);
+#endif
     /* 0x64 */ void (*unk64)();
 } CVFSDevice;
 

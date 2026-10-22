@@ -38,6 +38,12 @@
 #include "sf33rd/Source/Game/texgroup.h"
 #include "sf33rd/Source/Game/win_pl.h"
 #include "sf33rd/Source/Game/workuser.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/cmd_data.h"
+#include "sf33rd/Source/Game/upper3s.h"
+#include "sf33rd/Source/Game/upper3s_sm4.h"
+#include "sf33rd/Source/Game/upper3s_sys.h"
+#endif
 
 void pli_0000();
 void pli_1000();
@@ -366,6 +372,14 @@ void Player_control() {
     players_timer &= 0x7FFF;
     set_scrrrl();
     player_main_process[pcon_rno[0]]();
+#if defined(UPPER_3S)
+    // 3s' SM4: the partition timer of a charge is reset to its maximum as
+    // soon as the charged direction has reached one third of its charge, so
+    // the charge can always be partitioned in the full window.  The command
+    // system has already run above, so the state of the charges is current.
+    upper3s_sm4_charge_partition(waza_work[plw[0].wu.id], UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(waza_work[plw[1].wu.id], UPPER3S_SM4_WAZA_COUNT);
+#endif
     check_body_touch();
     check_damage_hosei();
     set_quake(&plw[0]);
@@ -1273,6 +1287,11 @@ void set_base_data(PLW* wk, s16 ix) {
     set_char_base_data(&wk->wu);
     wk->wu.target_adrs = (u32*)&plw[(ix + 1) & 1];
     wk->player_number = My_char[ix];
+#if defined(UPPER_3S)
+    // The 3s' overrides are keyed by the character index, so they can only
+    // be applied once player_number is known.
+    upper3s_apply_character(wk);
+#endif
     wk->wu.hit_adrs = wk->wu.target_adrs;
     wk->wu.dmg_adrs = wk->wu.target_adrs;
     cmd_init(wk);
@@ -1311,6 +1330,12 @@ void set_base_data_tiny(PLW* wk) {
     wk->wu.charset_id = plid_data[My_char[wk->wu.id]];
     wk->player_number = My_char[wk->wu.id];
     set_char_base_data(&wk->wu);
+#if defined(UPPER_3S)
+    // The attack table is shared between the two players of a character, so
+    // this only has to run once per round - but it has to run after the
+    // character data has been read.
+    upper3s_apply_character(wk);
+#endif
 
     if (wk->wu.id) {
         wk->wu.my_col_code |= 0x10;
@@ -1369,7 +1394,14 @@ void set_kizetsu_status(s16 ix) {
     piyori_type[ix].now.timer = 0;
     piyori_type[ix].store = 0;
     piyori_type[ix].recover = pl_nr_piyo_tbl[plnum];
+#if defined(UPPER_3S)
+    // Third Strike Upper: the stun bar of Akuma and of Remy is raised to
+    // the regular size of the stun bar.
+    piyori_type[ix].genkai =
+        upper3s_sys_stun_genkai(plnum, pl_piyo_tbl[plnum]) + stun_gauge_len_omake[omop_stun_gauge_len[ix]];
+#else
     piyori_type[ix].genkai = pl_piyo_tbl[plnum] + stun_gauge_len_omake[omop_stun_gauge_len[ix]];
+#endif
 
     if (piyori_type[ix].genkai < 56) {
         piyori_type[ix].genkai = 56;
@@ -1401,6 +1433,9 @@ void set_super_arts_status(s16 ix) {
     } else {
         saptr = &super_arts_data[My_char[ix]][Super_Arts[ix]];
     }
+#if defined(UPPER_3S)
+    saptr = upper3s_super_art_data(My_char[ix], Super_Arts[ix], saptr);
+#endif
 
     super_arts[ix].kind_of_arts = Super_Arts[ix];
     super_arts[ix].nmsa_g_ix = saptr->nmsa_g_ix;
@@ -1464,6 +1499,9 @@ void set_super_arts_status_dc(s16 ix) {
     } else {
         saptr = &super_arts_data[My_char[ix]][Super_Arts[ix]];
     }
+#if defined(UPPER_3S)
+    saptr = upper3s_super_art_data(My_char[ix], Super_Arts[ix], saptr);
+#endif
 
     super_arts[ix].kind_of_arts = Super_Arts[ix];
     super_arts[ix].nmsa_g_ix = saptr->nmsa_g_ix;

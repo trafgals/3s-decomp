@@ -14,6 +14,10 @@
 #include "sf33rd/Source/Game/debug/Debug.h"
 #include "sf33rd/Source/Game/workuser.h"
 #include "structs.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s.h"
+#include "sf33rd/Source/Game/upper3s_sys.h"
+#endif
 
 void read_adrs_store_mvxy(WORK* wk, s16* adrs);
 void remake_mvxy_PoGR(WORK* wk);
@@ -789,6 +793,21 @@ void setup_vitality(WORK* wk, s16 pno) {
     }
 
     wk->original_vitality = Com_Vital_Unit_Data[pno][save_w[Present_Mode].Damage_Level][ix];
+#if defined(UPPER_3S)
+    {
+        // Third Strike Upper: the health of Ibuki and of Twelve.
+        s16 scale;
+        s16 source = upper3s_sys_health_source(pno, &scale);
+
+        if (source != pno) {
+            wk->original_vitality = Com_Vital_Unit_Data[source][save_w[Present_Mode].Damage_Level][ix];
+        }
+
+        if (scale != 1000) {
+            wk->original_vitality = (wk->original_vitality * scale) / 1000;
+        }
+    }
+#endif
     wk->original_vitality += (s16)base_vital_omake[omop_vital_init[wk->id]];
     wk->dmcal_m = 32;
     wk->dmcal_d = (wk->original_vitality << 5) / Max_vitality;
@@ -859,6 +878,13 @@ void add_sp_arts_gauge_init(PLW* wk) {
         }
     } else if (!(wk->spmv_ng_flag2 & 0x20000000)) {
         asag = _add_arts_gauge[wk->player_number][wk->wu.add_arts_point][0];
+#if defined(UPPER_3S)
+        // Third Strike Upper: the metergain of a normal is halved for every
+        // consecutive whiff. The metergain of a special is not changed.
+        if (wk->wu.now_koc == U3S_KOC_NORMAL) {
+            asag = upper3s_sys_whiff_start(&wk->wu, asag);
+        }
+#endif
         add_super_arts_gauge(wk->sa, wk->wu.id, asag, wk->metamorphose);
     }
 }

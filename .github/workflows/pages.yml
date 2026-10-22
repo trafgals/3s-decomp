@@ -1,0 +1,104 @@
+name: the web build
+
+# The game is played in the browser: the WebAssembly build streams the disc
+# image over HTTP range requests, so the deployment holds the module and the
+# disc image, and nothing else.  The disc image is 612 megabytes, which is
+# over the limit of a file in a repository, so it is not committed: the
+# deployment fetches it from the release "web-data-1" of this repository.
+#
+# The site is built here and not committed either, so that the deployment
+# always holds the build of the sources of the branch it was run on.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "src/**"
+      - "include/**"
+      - "Makefile"
+      - "tools/web/**"
+      - ".github/workflows/pages.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time: the Pages site holds one deployment, and two
+# deployments that run at the same time would fight over it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install the emscripten toolchain
+        run: |
+          # The toolchain is installed by the emsdk itself and not by an
+          # action: the action downloads a copy of the emsdk that can be
+          # older than the newest release of the emscripten, and the build
+          # of the game needs the newest one.
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git emsdk
+          ./emsdk/emsdk install latest
+          ./emsdk/emsdk activate latest
+          source emsdk/emsdk_env.sh > /dev/null 2>&1
+          export EM_CONFIG="$EMSDK/.emscripten"
+          if [ ! -f "$EM_CONFIG" ]; then
+            emcc --generate-config
+          fi
+          emcc --version
+          # The steps that follow need the toolchain as well.
+          echo "PATH=$PATH" >> $GITHUB_ENV
+          echo "EMSDK=$EMSDK" >> $GITHUB_ENV
+          echo "EM_CONFIG=$EM_CONFIG" >> $GITHUB_ENV
+
+      - name: fetch the disc image
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download web-data-1 \
+            --repo trafgals/3s-decomp \
+            --pattern SF33RD.AFS \
+            --dir rom/THIRD
+          # The loose disc files are packaged into the module, so the build
+          # needs them before it runs.
+          gh release download web-data-1 \
+            --repo trafgals/3s-decomp \
+            --pattern IOP.tar.gz \
+            --dir build
+          tar -xzf build/IOP.tar.gz -C rom/THIRD
+
+      - name: build the SDL3 port for the browser
+        run: make setup_sdl3_wasm
+
+      - name: build the game
+        run: make PLATFORM=web UPPER_3S=1 BUILD_DIR=build/anniversary/web -j"$(nproc)"
+
+      - name: assemble the site
+        run: |
+          mkdir -p build/site/rom/THIRD
+          cp build/anniversary/web/index.html build/site/
+          cp build/anniversary/web/sf33rd.js build/site/
+          cp build/anniversary/web/sf33rd.data build/site/
+          cp build/anniversary/web/sf33rd.wasm build/site/
+          cp rom/THIRD/SF33RD.AFS build/site/rom/THIRD/
+
+      - name: upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: deploy the site
+        id: deployment
+        uses: actions/deploy-pages@v4

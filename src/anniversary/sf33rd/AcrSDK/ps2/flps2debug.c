@@ -59,7 +59,15 @@ void flPS2DebugInit() {
     flhDebugStr = flCreateTextureFromFile("IOP\\FONT8_8.TM2", 4);
 
     if (flhDebugStr == 0) {
+#if defined(TARGET_PS2)
         while (1) {}
+#else
+        // The host builds have no disc to read the font from. Spinning here
+        // would hang the browser tab with no explanation, so report the
+        // missing file and stop instead.
+        fatal_error("could not load the debug font (IOP\\FONT8_8.TM2); "
+                    "the loose disc files are missing");
+#endif
     }
 
     flPrintColor(-1);

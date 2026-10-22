@@ -10,6 +10,11 @@
 #include "sf33rd/Source/Game/HITEFEF.h"
 #include "sf33rd/Source/Game/HITEFPL.h"
 #include "sf33rd/Source/Game/HITPLEF.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s.h"
+#include "sf33rd/Source/Game/upper3s_sys.h"
+#include "sf33rd/Source/Game/upper3s_throw.h"
+#endif
 #include "sf33rd/Source/Game/HITPLPL.h"
 #include "sf33rd/Source/Game/PLCNT.h"
 #include "sf33rd/Source/Game/PLS01.h"
@@ -55,6 +60,14 @@ void make_red_blocking_time(s16 id, s16 ix, s16 num) {
 void hit_check_main_process() {
     aiuchi_flag = 0;
 
+#if defined(UPPER_3S)
+    // Third Strike Upper: the guard levers of the command buffer tell when a
+    // parry was attempted, so they have to be watched before the hit check
+    // of this frame decides whether the attack is parried.
+    upper3s_parry_frame(&plw[0], Game_timer);
+    upper3s_parry_frame(&plw[1], Game_timer);
+#endif
+
     if (hpq_in > 1) {
         if (ca_check_flag) {
             catch_hit_check();
@@ -68,6 +81,13 @@ void hit_check_main_process() {
     }
 
     clear_hit_queue();
+
+#if defined(UPPER_3S)
+    // Third Strike Upper: the throw animation of a thrown character is over
+    // when it leaves the caught state, and then it can be hit again.
+    upper3s_throw_frame(&plw[0]);
+    upper3s_throw_frame(&plw[1]);
+#endif
 }
 
 s16 set_judge_result() {
@@ -331,6 +351,18 @@ void set_caught_status(s16 ix) {
     ds->wu.routine_no[1] = 3;
     ds->wu.routine_no[2] = as->wu.att.ng_type;
     ds->wu.routine_no[3] = 0;
+#if defined(UPPER_3S)
+    // Third Strike Upper: a successful throw is invincible for its whole
+    // animation, so that the victim cannot be hit out of it (the Remy/Urien
+    // glitch and the Q throw bug).
+    upper3s_throw_invuln_start(ds);
+
+    // Third Strike Upper: a throw that lands in the window or in the
+    // cooldown of a guess parry cannot be teched.
+    if (upper3s_parry_guess_locked(ds->wu.id)) {
+        ds->hazusenai_flag = 1;
+    }
+#endif
     grade_add_clean_hits((WORK_Other*)as);
     check_guard_miss(&as->wu, ds, gddir);
 
@@ -340,6 +372,10 @@ void set_caught_status(s16 ix) {
 
     effect_02_init(&as->wu, ds->dm_point, 1, ds->wu.dm_rl);
     dm_status_copy(&as->wu, &ds->wu);
+#if defined(UPPER_3S)
+    // Third Strike Upper: a move touched the opponent.
+    upper3s_sys_whiff_contact(as, ds, U3S_SYS_CONTACT_HIT);
+#endif
     ds->wu.dm_vital = 0;
     as->wu.hit_stop = ds->wu.dm_stop = 0;
     as->wu.cmwk[8]++;
@@ -383,6 +419,10 @@ s16 check_blocking_flag(PLW* as, PLW* ds) {
 void setup_catch_atthit(WORK* as, WORK* ds) {
     set_damage_and_piyo((PLW*)as, (PLW*)ds);
     dm_status_copy(as, ds);
+#if defined(UPPER_3S)
+    // Third Strike Upper: a move touched the opponent.
+    upper3s_sys_whiff_contact(as, ds, U3S_SYS_CONTACT_HIT);
+#endif
     as->hit_stop = ds->dm_stop = 0;
 }
 
@@ -573,6 +613,10 @@ void plef_at_vs_player_damage_union(PLW* as, PLW* ds, s8 gddir) {
     check_guard_miss(&as->wu, ds, gddir);
     effect_02_init(&as->wu, ds->dm_point, 1, ds->wu.dm_rl);
     dm_status_copy(&as->wu, &ds->wu);
+#if defined(UPPER_3S)
+    // Third Strike Upper: a move touched the opponent.
+    upper3s_sys_whiff_contact(&as->wu, &ds->wu, U3S_SYS_CONTACT_HIT);
+#endif
     same_dm_stop(&as->wu, &ds->wu);
     as->wu.cmwk[8]++;
     as->wu.cmwk[15]++;
@@ -592,6 +636,23 @@ void plef_at_vs_player_damage_union(PLW* as, PLW* ds, s8 gddir) {
     paring_ctr_vs[Play_Type][ds->wu.id] = 0;
     paring_counter[ds->wu.id] = 0;
     paring_bonus_r[ds->wu.id] = 0;
+#if defined(UPPER_3S)
+    // Third Strike Upper: a hit that lands during the cooldown of the parry
+    // that would have parried it does 25% more damage. The damage of the
+    // hit is scaled, the stun of the move is not.
+    {
+        s16 permille = upper3s_parry_damage_permille(ds->wu.id, as->wu.att.guard);
+
+        if (permille != 1000) {
+            ds->wu.dm_vital = (ds->wu.dm_vital * permille) / 1000;
+        }
+    }
+
+    // Third Strike Upper: the damage stop of the hit would replace the hit
+    // stop of the superflash, and the frozen character could walk away
+    // while the superflash of the opponent is still running.
+    upper3s_superflash_hit(ds);
+#endif
     return;
 
 set_guard_status:
@@ -630,6 +691,12 @@ void set_guard_status(PLW* as, PLW* ds) {
     void grade_add_guard_success(s32 ix);
 #endif
 
+#if defined(UPPER_3S)
+    // Third Strike Upper: a move touched the opponent. A blocked projectile
+    // does not reset the scaling of anybody.
+    upper3s_sys_whiff_contact(&as->wu, &ds->wu, U3S_SYS_CONTACT_BLOCK);
+#endif
+
     if (as->wu.att.hs_you == 0 && as->wu.att.hs_me == 0) {
         ds->wu.routine_no[2] = ds->wu.old_rno[2];
     } else {
@@ -655,6 +722,12 @@ void set_guard_status(PLW* as, PLW* ds) {
     }
 
     hit_pattern_extdat_check(&as->wu);
+#if defined(UPPER_3S)
+    // Third Strike Upper: the damage stop of the blocked attack would replace
+    // the hit stop of the superflash, and the frozen character could walk
+    // away while the superflash of the opponent is still running.
+    upper3s_superflash_hit(ds);
+#endif
 }
 
 const s8 sel_sp_ch_tbl[12] = { 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0 };
@@ -663,6 +736,12 @@ const s16 sel_hs_add_tbl[6] = { 4, 3, 2, 1, 0, 0 };
 
 void set_paring_status(PLW* as, PLW* ds) {
     s16 hsadix;
+
+#if defined(UPPER_3S)
+    // Third Strike Upper: a move touched the opponent. A parried projectile
+    // only resets the scaling of the character that threw it.
+    upper3s_sys_whiff_contact(&as->wu, &ds->wu, U3S_SYS_CONTACT_PARING);
+#endif
 
     if ((as->wu.att.hs_you == 0) && (as->wu.att.hs_me == 0)) {
         ds->wu.routine_no[2] = ds->wu.old_rno[2];
@@ -959,7 +1038,36 @@ void set_damage_and_piyo(PLW* as, PLW* ds) {
 #endif
 
     cal_damage_vitality(as, ds);
+#if defined(UPPER_3S)
+    {
+        // Third Strike Upper: left right unblockables are not removed, but
+        // a hit that lands on a blocking character that faces away from the
+        // attacker is scaled to 50%.
+        s16 permille = upper3s_sys_crossup_permille(&as->wu, &ds->wu);
+
+        if (permille != 1000) {
+            ds->wu.dm_vital = (ds->wu.dm_vital * permille) / 1000;
+        }
+    }
+#endif
     ds->wu.dm_piyo = _add_piyo_gauge[as->player_number][as->wu.att.piyo];
+#if defined(UPPER_3S)
+    {
+        // Third Strike Upper: the stun of the move can be scaled or replaced.
+        // The relative scale is applied first, so that it also works on top
+        // of the retail value, which is only known at runtime.
+        s16 permille = upper3s_stun_permille(as->player_number, &as->wu);
+        s16 stun = upper3s_stun_value(as->player_number, &as->wu);
+
+        if (permille != 1000) {
+            ds->wu.dm_piyo = (ds->wu.dm_piyo * permille) / 1000;
+        }
+
+        if (stun >= 0) {
+            ds->wu.dm_piyo = stun;
+        }
+    }
+#endif
     ds->wu.dm_piyo = ds->wu.dm_piyo * stun_gauge_omake[omop_stun_gauge_add[(ds->wu.id + 1) & 1]] / 32;
 
     if ((ds->wu.pat_status == 32 || ds->wu.pat_status == 3) || ds->wu.pat_status == 25) {
@@ -1078,8 +1186,19 @@ s32 defense_sky(PLW* as, PLW* ds, s8 gddir) {
     }
 
     if (ds->py->flag == 0 && !(ds->guard_flag & 2) && as->wu.att.guard & 4) {
+#if defined(UPPER_3S)
+        if (just_now && !upper3s_parry_cooling(ds->wu.id, U3S_PARRY_AIR)) {
+#else
         if (just_now) {
+#endif
+#if defined(UPPER_3S)
+            s16 threshold = upper3s_parry_threshold(ds, U3S_PARRY_AIR, grdb2[ds->wu.id][attr_att]);
+#endif
+#if defined(UPPER_3S)
+            if (!(ds->spmv_ng_flag & 0x1000) && (ds->cp->waza_flag[5] >= threshold || abs)) {
+#else
             if (!(ds->spmv_ng_flag & 0x1000) && (ds->cp->waza_flag[5] >= grdb2[ds->wu.id][attr_att] || abs)) {
+#endif
                 blocking_point_count_up(ds);
                 as->wu.hf.hit.player = 0x80;
                 ds->wu.routine_no[2] = 0x22;
@@ -1178,8 +1297,20 @@ s32 defense_ground(PLW* as, PLW* ds, s8 gddir) {
 
     if (ds->py->flag == 0 && !(ds->guard_flag & 2) && as->wu.att.guard & 3) {
         if (as->wu.att.guard & 2) {
+#if defined(UPPER_3S)
+            if (just_now && !upper3s_parry_cooling(ds->wu.id, U3S_PARRY_HIGH)) {
+#else
             if (just_now) {
+#endif
+#if defined(UPPER_3S)
+                s16 threshold = upper3s_parry_threshold(ds, U3S_PARRY_HIGH, grdb[ds->wu.id][attr_att][0]);
+#endif
+#if defined(UPPER_3S)
+                if (!(ds->spmv_ng_flag & 0x1000) &&
+                    ((ds->cp->waza_flag[3] >= threshold) || abs)) {
+#else
                 if (!(ds->spmv_ng_flag & 0x1000) && ((ds->cp->waza_flag[3] >= grdb[ds->wu.id][attr_att][0]) || abs)) {
+#endif
                     blocking_point_count_up(ds);
                     as->wu.hf.hit.player = 64;
 
@@ -1233,8 +1364,19 @@ s32 defense_ground(PLW* as, PLW* ds, s8 gddir) {
         }
 
         if (as->wu.att.guard & 1) {
+#if defined(UPPER_3S)
+            if (just_now && !upper3s_parry_cooling(ds->wu.id, U3S_PARRY_LOW)) {
+#else
             if (just_now) {
+#endif
+#if defined(UPPER_3S)
+                s16 threshold = upper3s_parry_threshold(ds, U3S_PARRY_LOW, grdb[ds->wu.id][attr_att][1]);
+#endif
+#if defined(UPPER_3S)
+                if (!(ds->spmv_ng_flag & 0x1000) && (!(ds->cp->waza_flag[4] < threshold) || abs)) {
+#else
                 if (!(ds->spmv_ng_flag & 0x1000) && (!(ds->cp->waza_flag[4] < grdb[ds->wu.id][attr_att][1]) || abs)) {
+#endif
                     blocking_point_count_up(ds);
                     as->wu.hf.hit.player = 64;
                     ds->wu.routine_no[2] = 33;

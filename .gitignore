@@ -27,6 +27,10 @@ ctx.c
 .splache
 temp
 rom
+third_party
+
+# The dump of the character data of the disc (see tools/verify)
+upper3s_dump.txt
 
 # cps3
 src/cps3/
@@ -36,3 +40,4 @@ config/cps3/game_syms.txt
 config/cps3/game.ld
 
 .worktrees/
+Street Fighter III - 3rd Strike - Fight for the Future (Japan).zip

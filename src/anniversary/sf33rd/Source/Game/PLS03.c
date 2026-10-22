@@ -10,6 +10,9 @@
 #include "sf33rd/Source/Game/PulPul.h"
 #include "sf33rd/Source/Game/SysDir.h"
 #include "sf33rd/Source/Game/workuser.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s_input.h"
+#endif
 
 // Forward decls
 
@@ -730,9 +733,17 @@ s32 check_leap_attack(PLW* wk) {
             return 0;
         }
 
+#if defined(UPPER_3S)
+        // Third Strike Upper: the universal overhead comes out while the stick
+        // is held away or towards (B3).
+        if (!upper3s_input_combo_direction_ok(wk->cp->sw_lvbt, U3S_INPUT_LEVER_ANY)) {
+            return 0;
+        }
+#else
         if (wk->cp->sw_lvbt & 0xF) {
             return 0;
         }
+#endif
     } else {
         if (wk->cp->waza_flag[14] == 0) {
             return 0;
@@ -897,6 +908,16 @@ s32 check_chouhatsu(PLW* wk) {
         return 0;
     }
 
+#if defined(UPPER_3S)
+    // Third Strike Upper: the personal action comes out while the stick is
+    // held away or towards (B3).  The retail game lets Hugo do his personal
+    // action while the stick is held up, and that stays the case.
+    if (!upper3s_input_combo_direction_ok(wk->cp->sw_lvbt,
+                                          (wk->player_number == 6) ? U3S_INPUT_LEVER_ANY_BUT_UP
+                                                                    : U3S_INPUT_LEVER_ANY)) {
+        return 0;
+    }
+#else
     if (wk->player_number == 6) {
         if (wk->cp->sw_lvbt & 0xE) {
             return 0;
@@ -904,6 +925,7 @@ s32 check_chouhatsu(PLW* wk) {
     } else if (wk->cp->sw_lvbt & 0xF) {
         return 0;
     }
+#endif
 
     if (wk->cp->ca36 == 0) {
         return 0;

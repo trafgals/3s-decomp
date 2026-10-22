@@ -35,4 +35,18 @@ void Push_LDREQ_Queue_BG(s16 ix);
 s32 Check_LDREQ_Queue_BG(s16 ix);
 s32 Check_LDREQ_Queue_Direct(s16 ix);
 
+#if defined(UPPER3S_DUMP)
+/*
+ * The number of free slots in the request queue of the loader. Used by the
+ * disc dump, which has to know when there is room for another request.
+ */
+s16 ldreq_queue_space(void);
+
+/*
+ * Asks the loader for the data of one character. Only the texture group of
+ * the character is asked for.
+ */
+void Push_LDREQ_Queue_Char(s16 char_index, s16 id);
+#endif
+
 #endif
