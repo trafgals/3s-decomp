@@ -89,5 +89,54 @@ class Hitstun(unittest.TestCase):
                 self.assertEqual(F.hit_advantage(v), F.hit_advantage(u))
 
 
+
+class BlockAdvantage(unittest.TestCase):
+    def test_twelve_jab_axe(self):
+        # TW8 "Increase hit and block advantage on Jab A.X.E. (214LP), make it at most -1/-2 on
+        # block." The Strong and Fierce versions are unchanged.
+        def advantage(button, build, block):
+            lines = [f"1 {x.split()[1]} {'4' if block else '5'}" for x in F.motion("214", button)] + [f"80 5 {'4' if block else '5'}"]
+            return F.hit_advantage(F.run(lines, p1="twelve", p2="ken", pos=(400, 440), build=build))
+
+        self.assertEqual((advantage("LP", "vanilla", False), advantage("LP", "vanilla", True)), (-1, -5))
+        self.assertEqual((advantage("LP", "upper3s", False), advantage("LP", "upper3s", True)), (2, -2))
+        for button in ("MP", "HP"):
+            with self.subTest(button=button):
+                self.assertEqual(advantage(button, "upper3s", True), advantage(button, "vanilla", True))
+
+
+class Durations(unittest.TestCase):
+    """Moves made shorter by cutting their chain (upper3s_chain_set_tail())."""
+
+    @staticmethod
+    def busy(script, char, build, pos=(300, 600)):
+        rows = F.run(script, p1=char, p2="ken", pos=pos, build=build)
+        start = F.first(rows, lambda r: r["p"][0]["koc"] == 5)
+        return rows, start, F.free(rows, 0, start) - start
+
+    def test_sean_hadou_burst_recovery(self):
+        # SN11 "Decrease recovery on Hadou Burst from 61f to 51f." The super (SA I) starts on the
+        # frame of its superflash; the projectile still comes out at the same time.
+        script = ["@stocks 1 3"] + F.motion("236236", "LP") + F.wait(160)
+        (v, sv, lv), (u, su, lu) = (self.busy(script, "sean", b, (250, 600)) for b in ("vanilla", "upper3s"))
+        self.assertEqual(lv, 114)
+        self.assertEqual(lu, 104)
+        self.assertEqual(F.first_hit(u), F.first_hit(v))
+
+    def test_remy_taunt_length(self):
+        # RM7 "Decrease total length of Personal Action (taunt) from 131f to ~80f." Its bonuses
+        # (meter, and stun on the next hit) still come.
+        script = ["@stocks 1 0", "1 5+HP+HK"] + F.wait(170) + ["@pos 400 440", "1 5+HP"] + F.wait(60)
+        (v, _, lv), (u, _, lu) = (self.busy(script, "remy", b) for b in ("vanilla", "upper3s"))
+        self.assertEqual((lv, lu), (131, 80))
+
+        def bonuses(rows):
+            meter = [b["p"][0]["gauge"] - a["p"][0]["gauge"] for a, b in zip(rows, rows[1:]) if b["p"][0]["gauge"] > a["p"][0]["gauge"]]
+            stun = [b["p"][1]["stun"] - a["p"][1]["stun"] for a, b in zip(rows, rows[1:]) if b["p"][1]["stun"] > a["p"][1]["stun"]]
+            return meter[:3], stun
+
+        self.assertEqual(bonuses(u), bonuses(v))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -202,6 +202,7 @@ typedef struct {
 #define U3S_MV_STUN_PERMILLE 0x40 /* stun, scaled by permille/1000 */
 #define U3S_MV_STARTUP 0x80       /* the startup of the move, in game frames */
 #define U3S_MV_RECOVERY 0x100     /* the recovery of the move, in game frames */
+#define U3S_MV_TAIL 0x200         /* the game frames from `tail_at` to the end of the move */
 
 typedef struct {
     s16 koc;
@@ -234,6 +235,15 @@ typedef struct {
     s16 startup;       /* only used when U3S_MV_STARTUP is set */
     s16 recovery_from; /* only used when U3S_MV_RECOVERY is set */
     s16 recovery;      /* only used when U3S_MV_RECOVERY is set */
+    /*
+     * U3S_MV_TAIL: the frames of the straight line of the chain from the game
+     * frame `tail_at` of the move to its end hold `tail_from` game frames in
+     * the retail data and are shortened to `tail` (upper3s_chain_set_tail()).
+     * Rows that do not use it leave the three fields out (zero).
+     */
+    s16 tail_at;
+    s16 tail_from;
+    s16 tail;
 } Upper3sMove;
 
 /* Per character override tables. Defined by upper3s/plXX.c. */
@@ -328,8 +338,25 @@ s16 upper3s_damage_base(s16 char_id, WORK* wk);
  * number cannot tell the crouching Medium Punch (char_ix 21) from the
  * standing one (char_ix 3).  The char_ix is the index of the move in the
  * character data and it is the only thing that identifies it.
+ *
+ * `frame` describes the frame that is playing (U3S_FRAME_*): some rules give
+ * the cancel on the active frames of a move, or in the hitstop after a hit,
+ * instead of on the frames the disc marks.
  */
-u8 upper3s_cancel_mask(s16 char_id, s16 koc, s16 char_ix, u8 cg_cancel);
+#define U3S_FRAME_ACTIVE 0x01  /* the frame has an attack box (WORK.cg_ja.atix is not 0) */
+#define U3S_FRAME_HITSTOP 0x02 /* the attacker is in a hitstop (WORK.hit_stop is not 0) */
+
+u8 upper3s_cancel_mask(s16 char_id, s16 koc, s16 char_ix, s16 frame, u8 cg_cancel);
+
+/*
+ * The cancel rules that depend on the player's input, called by
+ * PLS00.c:check_cg_cancel_data() on every frame of a move before the cancels
+ * are checked: a target combo follow-up pressed before the frames of the
+ * target combo is kept for them (AL4; it may add the button to the player's
+ * `cp->sw_new` and `cp->sw_now`), and Remy's crouching lights chain into each
+ * other (RM6; it may add the normal cancel bit to `wu.cg_cancel`).
+ */
+void upper3s_cancel_input(PLW* wk);
 
 #if defined(UPPER3S_DUMP)
 /*

@@ -97,6 +97,14 @@ const Upper3sMove upper3s_moves_remy[] = {
     { U3S_KOC_NORMAL, 16, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -18, 0, 0, 0, 0, 0 }, /* far s.HK (vanilla -7) */
     { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -17, 0, 0, 0, 0, 0 }, /* c.MK (vanilla -8) */
     { U3S_KOC_NORMAL, 14, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -15, 0, 0, 0, 0, 0 }, /* 6MK (vanilla -6) */
+    /*
+     * RM7 - "Decrease total length of Personal Action (taunt) from 131f to ~80f."
+     * The taunt (HP+HK) is special move animation 36. Measured: Remy is in the attack state for
+     * 131 frames (the post's number), then 5 actionable frames to the end of the chain, 135 frames
+     * in all: 17 frames of 5, a pose of 40 (from frame 85), 2 frames of 5. The chain is brought to
+     * 84 frames, so the taunt lasts 80; the longest frame, the pose, is shortened first.
+     */
+    { U3S_KOC_ATTACK, 36, U3S_MV_TAIL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 135, 84 }, /* the taunt */
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }                              /* terminator */
 };
 

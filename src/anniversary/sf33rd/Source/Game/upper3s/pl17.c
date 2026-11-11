@@ -79,6 +79,15 @@ const Upper3sMove upper3s_moves_twelve[] = {
      * are named directly. The last hit decides the advantage (vanilla -1). */
     { U3S_KOC_ENTRY, 49, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -5, 0, 0, 0, 0, 0 }, /* c.HP, second hit */
     { U3S_KOC_ENTRY, 50, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -5, 0, 0, 0, 0, 0 }, /* c.HP, third hit */
+    /*
+     * TW8 - "Increase hit and block advantage on Jab A.X.E. (214LP), make it at most -1/-2 on block."
+     * Jab A.X.E. is special move animation 32 (the Strong and Fierce versions start in it and go on in
+     * 33/34); its two hits load the attack entries 90 and 43. Measured: -1 on hit, -5 on block. Its
+     * recovery is six frames of one game frame each, which cannot be shortened, so the defender's hold
+     * of the last hit (hs_you, which the defender gets on hit and on block, HITCHECK.c:dm_status_copy())
+     * is made 3 frames longer: -9 -> -12.
+     */
+    { U3S_KOC_ENTRY, 43, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -12, 0, 0, 0, 0, 0 }, /* Jab A.X.E., last hit */
     { U3S_KOC_NORMAL, 9, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -8, 0, 0, 0, 0, 0 }, /* s.LK (vanilla -1) */
     { U3S_KOC_NORMAL, 12, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 }, /* s.MK (vanilla -1) */
     { U3S_KOC_NORMAL, 15, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -12, 0, 0, 0, 0, 0 }, /* s.HK (vanilla -1) */

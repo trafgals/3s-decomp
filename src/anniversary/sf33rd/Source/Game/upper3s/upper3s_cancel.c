@@ -1,6 +1,8 @@
 #include "common.h"
 #include "sf33rd/Source/Game/upper3s.h"
 #include "sf33rd/Source/Game/upper3s_ch_alex.h"
+#include "sf33rd/Source/Game/upper3s_ch_elena.h"
+#include "sf33rd/Source/Game/upper3s_ch_remy.h"
 #include "sf33rd/Source/Game/upper3s_ch_q.h"
 #include "sf33rd/Source/Game/upper3s_ch_twelve.h"
 
@@ -19,8 +21,8 @@
  * that the shared file needs a single hook:
  *
  *     #if defined(UPPER_3S)
- *         wk->wu.cg_cancel = upper3s_cancel_mask(wk->player_number, wk->wu.now_koc, wk->as->char_ix,
- *                                                 wk->wu.cg_cancel);
+ *         wk->wu.cg_cancel = upper3s_cancel_mask(wk->player_number, wk->wu.now_koc, char_ix,
+ *                                                 frame, wk->wu.cg_cancel);
  *     #endif
  *
  * The move is addressed by two things:
@@ -43,7 +45,7 @@
  * PLS00.c:check_cg_cancel_data(), so the cancel cannot come out before the
  * move has connected.
  */
-u8 upper3s_cancel_mask(s16 char_id, s16 koc, s16 char_ix, u8 cg_cancel) {
+u8 upper3s_cancel_mask(s16 char_id, s16 koc, s16 char_ix, s16 frame, u8 cg_cancel) {
     /* The special moves: Q's rushes (Q3). */
     if (koc == U3S_KOC_ATTACK) {
         if (char_id == U3S_Q) {
@@ -63,7 +65,9 @@ u8 upper3s_cancel_mask(s16 char_id, s16 koc, s16 char_ix, u8 cg_cancel) {
         return upper3s_ch_alex_cancel_mask(char_ix, cg_cancel);
 
     case U3S_Q:
-        return upper3s_ch_q_cancel_mask(char_ix, cg_cancel);
+        return upper3s_ch_q_active_cancel_mask(char_ix, frame, upper3s_ch_q_cancel_mask(char_ix, cg_cancel));
+    case U3S_ELENA:
+        return upper3s_ch_elena_cancel_mask(char_ix, frame, cg_cancel);
 
     case U3S_TWELVE:
         return upper3s_ch_twelve_cancel_mask(char_ix, cg_cancel);
@@ -73,4 +77,20 @@ u8 upper3s_cancel_mask(s16 char_id, s16 koc, s16 char_ix, u8 cg_cancel) {
     }
 
     return cg_cancel;
+}
+
+void upper3s_cancel_input(PLW* wk) {
+    if ((wk->as == NULL) || (wk->cp == NULL) || (wk->wu.now_koc != U3S_KOC_NORMAL)) {
+        return;
+    }
+
+    if (wk->player_number == U3S_ALEX) {
+        upper3s_ch_alex_target_combo_buffer(wk->wu.id, wk->as->char_ix, wk->wu.cg_cancel, &wk->cp->sw_new,
+                                            &wk->cp->sw_now);
+    }
+
+    if (wk->player_number == U3S_REMY) {
+        /* RM6: the chains between the crouching lights. The lever bits of sw_new are the held lever. */
+        wk->wu.cg_cancel = upper3s_ch_remy_chain(wk->as->char_ix, wk->wu.cg_cancel, wk->cp->sw_new, wk->cp->sw_new & 0xF);
+    }
 }

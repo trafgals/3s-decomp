@@ -3,7 +3,7 @@
 As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
 
 <!-- summary:start -->
-**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 47 verified in a fight test, 2 done but not yet measured, 8 partial, 76 not done, 1 not needed in this version.
+**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 56 verified in a fight test, 2 done but not yet measured, 8 partial, 67 not done, 1 not needed in this version.
 <!-- summary:end -->
 
 ## How to read this
@@ -34,7 +34,7 @@ As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://m
 | I1 | A 3s' build | **Done on this branch** for the host builds: `UPPER_3S=1` with `PLATFORM=linux`, `web` or `headless`. A 3s' PS2 ELF is not possible yet: the PS2 rule always byte-compares against `THIRD_U.BIN`. |
 | I2 | Something to play it on | **On this branch**: the SDL3 port (`PLATFORM=linux`, needs SDL3 and ffmpeg) and the WebAssembly port from PR #1, and the headless port for tests. The published site (trafgals.github.io/3s-decomp) still runs PR #1's code, without the fixes of this branch. |
 | I3 | A test harness | **Done on this branch**: `make test` (unit tests on synthetic characters) and `make match-test` (fight tests in the real engine, `tests/match/`). |
-| I4 | A way to change disc data | **On this branch** (from PR #1): `upper3s/upper3s_dump.c`, `upper3s/upper3s_chain.c`, `tools/upper3s/`. The fight tests found and this branch fixed that the hitstun/knockback overrides wrote to the wrong attack entry. The chain walker's startups agree with the spec's retail numbers on every move measured so far. |
+| I4 | A way to change disc data | **On this branch** (from PR #1): `upper3s/upper3s_dump.c`, `upper3s/upper3s_chain.c`, `tools/upper3s/`. The fight tests found and this branch fixed that the hitstun/knockback overrides wrote to the wrong attack entry. The chain walker's startups agree with the spec's retail numbers on every move measured so far. Patch kinds: damage, stun, knockback, hitstun, startup, recovery, and the tail of a chain from a given frame (`U3S_MV_TAIL`, for moves whose chain has no attack data). Not yet: hit, hurt, throw and push boxes, cancel windows per frame (the cancel rules use the frames' own bits, their active frames and hitstops), and new moves. |
 | I5 | Specials are unnamed | **On this branch** (from PR #1): `tools/upper3s/decode_cmd.py` reads `cmd_data.c` and `bin2obj/asstbl.c`. The fight tests identify a move by its effect (`koc` and `cix` in the log). |
 | I6 | Guarding the vanilla build without the game file | **On this branch** (from PR #1): `tools/verify/ps2_touched_sources.sh` compares the preprocessed PS2 sources with those of the retail-matched commit. |
 | I7 | Leftover assembly (not a blocker) | Two game functions (`MTRANS` `mlt_obj_trans_rgb_ext`, `end_20` `sea_write`) and `EFFXX`'s two effect jump tables (`effmovejptbl`, `effinitjptbl`) are still included from assembly, and 6 CRI functions are not decompiled. They link as they are. |
@@ -74,7 +74,7 @@ The post's order. The number after each name is the character index.
 | CL3 | c.LP startup 2f → 3f. | disc | verified |
 | CL4 | Tensei Ranka (SA III): startup hitbox reaches the floor (can't be crouched); pulls in and down so all hits connect vs airborne opponents; enough knockdown advantage for a crossup; 2 stocks; bar as long as Shippu's. `super_arts_data[15][2]` 72/3 → 80/2 | table + disc | partial (stocks and bar verified) |
 | CL5 | Houyoku-sen's middle hits no longer un-combo vs crouching Makoto etc. | disc | — |
-| CL6 | Goes through the mandatory standing frame after wakeup, like every other character. | find | — |
+| CL6 | Goes through the mandatory standing frame after wakeup, like every other character. Not reproduced after a sweep: for Chun-Li and 11 others the last frame of the knockdown has no hurtbox and the character is free (standing, or crouching with down held) on the next. Other wakeups (throws, air knockdowns) not checked yet. | find | — |
 | CL7 | Crouching head hurtbox 2–3px higher and 3–4px further back, in every crouching animation (neutral, crouch-block, non-low-profile attacks). | disc | — |
 
 ### Ken (11)
@@ -170,9 +170,9 @@ The post's order. The number after each name is the character index.
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| EL1 | c.LK chains into itself. | disc | — |
+| EL1 | c.LK chains into itself. | logic | verified |
 | EL2 | Mallet Smash: startup frames unthrowable (7f are throwable today). | disc | — |
-| EL3 | s.MP cancellable from the 2nd hit, not just the 1st. | disc | — |
+| EL3 | s.MP cancellable from the 2nd hit, not just the 1st. | logic | verified |
 | EL4 | Brave Dance juggles properly vs airborne opponents outside the corner. | disc | — |
 | EL5 | Healing (SA III): faster cancel animation; faster health recovery. | disc + logic | partial (recovery rate, `PLPAT08.c`) |
 | EL6 | Spinning Beat keeps its 3 stocks. | none | n/a |
@@ -202,7 +202,7 @@ The post's order. The number after each name is the character index.
 | AL1 | Hyper Bomb (SA I) startup 0+1 → 1+0; possibly slightly less damage, except the back-turned Backdrop Bomb. | disc | — |
 | AL2 | Boomerang Raid: more forward movement on the middle hits; longer range on the final grab. | disc | — |
 | AL3 | Air Knee Smash: **all** versions not air-parryable; EX stays ground-parryable. | disc | — |
-| AL4 | Target combo c.LK→c.MK: cancel window longer than 1f. | disc | — |
+| AL4 | Target combo c.LK→c.MK: cancel window longer than 1f. | logic | verified |
 | AL5 | Juggles allowed after Flash Chops that hit an airborne opponent. | disc | — |
 | AL6 | c.MP special- and super-cancellable on hit/block/parry. | logic | verified |
 | AL7 | c.MK super-cancellable on hit/block/parry, including in the target combo. | logic | verified |
@@ -229,13 +229,13 @@ The post's order. The number after each name is the character index.
 | Q2 | c.MK super-cancellable on hit/block/parry. | logic | verified |
 | Q3 | All overhead/low rush punches ([4]6P/K, [P]) super-cancellable on hit/block/parry. | logic | verified |
 | Q4 | Far s.LP startup 6f → 4f. | disc | verified |
-| Q5 | 4HK: cancel window extends past the first active frame. | disc | — |
+| Q5 | 4HK: cancel window extends past the first active frame. | logic | verified |
 | Q6 | More hitstun on c.LK, c.MK and s.HK (s.HK is −10 on hit). | disc | verified |
 | Q7 | High Speed Barrage (slaps), all versions: change the opponent's movement on the middle hits so every hit connects. | disc | — |
 | Q8 | EX slaps: first hit's hitbox extends down, to connect on crouchers. | disc | — |
 | Q9 | New EX (PP) Total Destruction (SA III) that grabs immediately on activation. | new | — |
 | Q10 | Punch Total Destruction can't trade hits. | disc | — |
-| Q11 | QCT+P deactivates Total Destruction. | new | — |
+| Q11 | QCT+P deactivates Total Destruction. **Conflicts with the retail game:** while Total Destruction is active, 236+P is already its punch attack (special 53; 236+K is the grab, 54; `cmd_data.c:p12_cmd_32`/`_33`), the "punch version" Q10 refers to. QCT is 236 in the post's own notation (MK3: "QCT+K (236K)"). Needs the designer's choice of another input. | new | — |
 | Q12 | Taunt health bonus for 1–3 taunts: 1200 base/1400/1705/2050 → 1200/1400/1600/1800. | logic | verified |
 
 ### Remy (19)
@@ -247,8 +247,8 @@ The post's order. The number after each name is the character index.
 | RM3 | Close s.HP: the earlier hitboxes knock airborne opponents down like the later ones, with juggles after. | disc | — |
 | RM4 | More hitstun on far s.MK, far s.HK, c.MK and 6MK, so none is negative on hit. | disc | verified |
 | RM5 | s.MK: less knockback on grounded opponents. Target combo s.MK→s.HK: bigger hitboxes on the 2nd hit. | disc | — |
-| RM6 | Chains c.LP→c.LK and c.LK→c.LP. | disc | — |
-| RM7 | Taunt length 131f → about 80f. | disc | — |
+| RM6 | Chains c.LP→c.LK and c.LK→c.LP. | logic | verified |
+| RM7 | Taunt length 131f → about 80f. | disc | verified |
 | RM8 | Light of Virtue meter gain on startup/hit/block 0/1/1 → 1/3/2. | table + disc | — |
 | RM9 | Rising Rage Flash: all strengths super-cancellable on hit/block/parry; juggles after all versions. | logic + disc | — |
 | RM10 | Cold Blue Kick (63214K): LK and MK versions not negative on hit up close; MK version +2. | disc | verified |
@@ -265,7 +265,7 @@ The post's order. The number after each name is the character index.
 | TW5 | Far s.MP, s.MP and c.MP special- and super-cancellable on hit/block/parry. | logic | verified |
 | TW6 | c.MP superjump-cancellable on hit/block, like s.MK. | logic | verified |
 | TW7 | c.MK super-cancellable on hit/block/parry. | logic | verified |
-| TW8 | Jab A.X.E. (214LP): more hit and block advantage, at most −1/−2 on block. | disc | — |
+| TW8 | Jab A.X.E. (214LP): more hit and block advantage, at most −1/−2 on block. | disc | verified |
 | TW9 | All air normals special-cancellable on hit/block into A.X.E. (j.214P) or D.R.A. (j.214K), and super-cancellable into X.F.L.A.T. | logic | verified |
 | TW10 | X.N.D.L.: drags juggled opponents down so more hits connect. | disc | — |
 | TW11 | X.F.L.A.T. (SA II): remove the low-damage air-to-air version (always full damage); 2 stocks. `super_arts_data[18][1]` 112/1 → 112/2 | table + disc | partial (2 stocks verified) |
@@ -278,14 +278,14 @@ The post's order. The number after each name is the character index.
 | SN1 | More hitstun on close and far s.HP, c.HP, s.MK, far s.HK, c.MK and 6HP, so none is negative on hit. | disc | verified |
 | SN2 | Sean Roll (214P) super-cancellable in the middle. | disc | — |
 | SN3 | Ryuubi Kyaku (236K) startup 25f (all) → 17/19/21f; the HK version knocks down. | disc | partial (all three 25 → 19 measured; one shared chain, and no knockdown) |
-| SN4 | Ryuubi Kyaku L/M: more hit advantage, so supers link after a hit. | disc | — |
+| SN4 | Ryuubi Kyaku L/M: more hit advantage, so supers link after a hit. Measured: L/M are −3 on hit in the retail game and −8/−6 with SN3's shorter startup, because the kick ends when Sean lands (the startup change moves the hit earlier but not the landing). The defender's hold (`hs_you`) does not reach these hits: their stops are synced to the attacker's (`HITCHECK.c:same_dm_stop()`, `att.dipsw & 1`). Needs a patch of the hit's level or of the sync. | disc | — |
 | SN5 | Faster startup on all Tackles: c.MK xx LP Tackle and s.HP/c.HP xx MP Tackle combo, and HP Tackle is 1f from comboing. | disc | — |
-| SN6 | HP Tackle can be faked/cancelled by tapping K during its startup. | new | — |
+| SN6 | HP Tackle can be faked/cancelled by tapping K during its startup. | new | verified |
 | SN7 | HP and EX Tackle not ground-parryable. | disc | — |
 | SN8 | EX Tackle (236PP~P): hitbox active from 8f to the end, grabs automatically on contact; super-cancellable on the last hit. | disc + new | — |
 | SN9 | Dragon Smash (623P) L/M/H/EX startup 5/5/9/8 → 3/4/5/3f. | disc | partial (3/4/5 measured; EX 8 → 5, not 3) |
 | SN10 | Hyper Tornado (SA III) juggles properly vs airborne opponents. | disc | — |
-| SN11 | Hadou Burst recovery 61f → 51f. | disc | — |
+| SN11 | Hadou Burst recovery 61f → 51f. | disc | verified |
 
 ### Gill (0)
 
@@ -319,8 +319,8 @@ No changes in the post.
 
 ### Still open
 
-1. **B2 is not reproduced.** No fight makes a character move during the opponent's superflash: a hit, a block or a parry of a projectile on the first frame of the flash, and the opponent's fireball landing then, all leave the frozen character frozen in the retail game too (a hit on the frame the flash starts is delayed until after it). PR #1's guard drops the damage stop of a frozen character that is hit, on the theory that it replaces the flash's stop, but `PLMAIN.c:select_hit_stop()` keeps the longer of the two. The trigger is not known, so the item stays `done`, not verified.
-2. **HU5: check the move.** PR #1 reads the Meat Squasher's startup from the disc as 24/52/67, against the post's 21/31/44; light is close, medium and heavy are far off.
-3. **SN3 and SN9 are partial.** The three Ryuubi Kyaku share one chain, so all three are 19 frames (the spec asks 17/19/21) and the Roundhouse knockdown is not done. EX Dragon Smash is 5 frames (the spec asks 3), because the chain cannot be held shorter.
-4. **Documentation errors.** Issue #2 says `plpat16.c` is Makoto (it is Chun-Li; Makoto is `plpat17.c`, AGENTS.md §3.2). Chun-Li's table header calls SA I "Houyoku-sen" (it is Kikoushou). PR #1's table for Q labels entry 1 as "6LP"; in the game it is the far standing Jab.
-
+1. **SN3 makes L/M Ryuubi Kyaku worse on hit.** With the startup 25 → 19 (PR #1), the hit comes 6 frames earlier but Sean still lands when he did, so L/M go from −3 to −8/−6 on hit. SN4 is meant to raise their advantage; it has to make up for this as well.
+2. **B2 is not reproduced.** No fight makes a character move during the opponent's superflash: a hit, a block or a parry of a projectile on the first frame of the flash, and the opponent's fireball landing then, all leave the frozen character frozen in the retail game too (a hit on the frame the flash starts is delayed until after it). PR #1's guard drops the damage stop of a frozen character that is hit, on the theory that it replaces the flash's stop, but `PLMAIN.c:select_hit_stop()` keeps the longer of the two. The trigger is not known, so the item stays `done`, not verified.
+3. **HU5: check the move.** PR #1 reads the Meat Squasher's startup from the disc as 24/52/67, against the post's 21/31/44; light is close, medium and heavy are far off.
+4. **SN3 and SN9 are partial.** The three Ryuubi Kyaku share one chain, so all three are 19 frames (the spec asks 17/19/21) and the Roundhouse knockdown is not done. EX Dragon Smash is 5 frames (the spec asks 3), because the chain cannot be held shorter.
+5. **Documentation errors.** Issue #2 says `plpat16.c` is Makoto (it is Chun-Li; Makoto is `plpat17.c`, AGENTS.md §3.2). Chun-Li's table header calls SA I "Houyoku-sen" (it is Kikoushou). PR #1's table for Q labels entry 1 as "6LP"; in the game it is the far standing Jab.

@@ -146,4 +146,17 @@ s16 upper3s_ch_q_taunt_konjyou(s16 konjyou);
 
 u8 upper3s_ch_q_special_cancel_mask(s16 char_ix, u8 cg_cancel);
 
+/*
+ * Q5 - "Extend the cancel window on B+RH (4HK) past the first active frame, so
+ * it can be cancelled from further away." 4HK is char_ix 17. In the retail
+ * data its cancel bits (special and super, 0x60) are on the first three
+ * active frames only, so it cannot be cancelled when it connects later (from
+ * further away: measured, it hits on frame 18 at 110 apart and its cancel
+ * byte is 0 there). The bits are given to every active frame and to the
+ * hitstop after a hit (`frame` holds U3S_FRAME_* of upper3s.h).
+ */
+#define U3S_Q_BACK_ROUNDHOUSE 17
+
+u8 upper3s_ch_q_active_cancel_mask(s16 char_ix, s16 frame, u8 cg_cancel);
+
 #endif /* UPPER3S_CH_Q_H */

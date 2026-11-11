@@ -146,6 +146,141 @@ class TwelveSuperjump(unittest.TestCase):
 
 
 
+def damage_frames(rows):
+    return [b["f"] for a, b in zip(rows, rows[1:]) if b["p"][1]["vit"] < a["p"][1]["vit"]]
+
+
+class CancelWindows(unittest.TestCase):
+    def special_after(self, char, normal, follow, d, after, build):
+        """The frame a special move (slot 5) starts when its motion begins on frame `after` of a
+        fight that starts with `normal`, or None."""
+        press = F.press_frame(F.run([f"1 {normal}"] + F.wait(70), p1=char, p2="ken", pos=(400, 400 + d), build=build), 0)
+        rows = F.run([f"1 {normal}", f"{after - press} 5"] + follow + F.wait(70), p1=char, p2="ken", pos=(400, 400 + d),
+                     build=build)
+        return F.first(rows, lambda r: r["p"][0]["koc"] == 5, after)
+
+    def test_elena_crouching_short_chains_into_itself(self):
+        # EL1 "Allow her to chain crouching Short (2LK) into itself." A second c.LK pressed in the
+        # first one's cancel window hits before the first would have ended (frame 27).
+        for build, chains in (("vanilla", False), ("upper3s", True)):
+            for k in (1, 5, 10):
+                with self.subTest(build=build, k=k):
+                    rows = F.run(["1 2+LK", f"{4 + k} 2", "1 2+LK"] + F.wait(50), p1="elena", p2="ken", pos=(400, 440),
+                                 build=build)
+                    hits = damage_frames(rows)
+                    self.assertEqual(len(hits) >= 2 and hits[1] < 27, chains)
+
+    def test_elena_standing_strong_second_hit(self):
+        # EL3 "Allow cancels from the 2nd hit of standing Strong, not just the first hit." It hits
+        # on frames 10 and 15 (the damage shows a frame later); Rhino Horn (214LK) entered after the
+        # first hit comes out in both builds, after the second only in 3s'.
+        rhino = F.motion("214", "LK")
+        for build in ("vanilla", "upper3s"):
+            with self.subTest(build=build):
+                self.assertEqual(damage_frames(F.run(["1 5+MP"] + F.wait(40), p1="elena", p2="ken", pos=(400, 440), build=build)),
+                                 [11, 17])
+                self.assertIsNotNone(self.special_after("elena", "5+MP", rhino, 40, 12, build))
+                self.assertIsNone(self.special_after("elena", "5+MP", rhino, 40, 22, build))
+        self.assertIsNone(self.special_after("elena", "5+MP", rhino, 40, 17, "vanilla"))
+        self.assertIsNotNone(self.special_after("elena", "5+MP", rhino, 40, 17, "upper3s"))
+
+    def test_q_back_roundhouse_from_further_away(self):
+        # Q5 "Extend the cancel window on B+RH (4HK) past the first active frame, so it can be
+        # cancelled from further away." From 60 apart it hits on its first active frames, from 110
+        # on a later one. The follow-up is Q's 214LP, entered on the frame of the hit.
+        follow = F.motion("214", "LP")
+        for build in ("vanilla", "upper3s"):
+            with self.subTest(build=build):
+                self.assertIsNotNone(self.special_after("q", "4+HK", follow, 60, 16, build))
+        self.assertIsNone(self.special_after("q", "4+HK", follow, 110, 19, "vanilla"))
+        self.assertIsNotNone(self.special_after("q", "4+HK", follow, 110, 19, "upper3s"))
+
+    def test_alex_target_combo_window(self):
+        # AL4 "Increase the cancel window for his Target Combo (cr.Short->cr.Fwd) to be longer than
+        # 1f, so that it can be done as easily as any other Target Combo in the game." c.LK hits on
+        # frame 9 and ends on 24; MK is pressed (down held) on a frame after the hit, and the
+        # target combo's c.MK (animation 30) starts before the c.LK would have ended.
+        def window(build):
+            ok = []
+            for frame in range(8, 25):
+                rows = F.run(["1 2+LK", f"{frame - 5} 2", "1 2+MK", "50 2"], p1="alex", p2="ken", pos=(400, 440), build=build)
+                tc = F.first(rows, lambda r: r["p"][0]["rno"][1] == 4 and r["p"][0]["cix"] == 30, 9)
+                self.assertFalse(any(r["p"][0]["rno"][1] == 4 and r["p"][0]["cix"] == 0 for r in rows), "a wrong animation")
+                if tc is not None and tc < 24:
+                    ok.append(frame)
+            return ok
+
+        self.assertEqual(window("vanilla"), [18, 19])
+        self.assertEqual(window("upper3s"), list(range(10, 20)))  # Ken's s.MP->s.HP: 11 frames
+
+
+
+class RemyChains(unittest.TestCase):
+    # RM6 "Allow chaining from crouching Jab->crouching Short and crouching Short->crouching Jab."
+    # The second normal is pressed on a frame after the first hits, down held; the chain worked when
+    # it starts (its animation: c.LP 18, c.LK 27, c.MK 30) before the first would have ended.
+    @staticmethod
+    def chains(first, second, cix, build):
+        alone = F.run([f"1 2+{first}", "40 2"], p1="remy", p2="ken", pos=(400, 440), build=build)
+        h = F.first_hit(alone)
+        end = F.free(alone, 0, h)
+        for k in range(0, 8):
+            rows = F.run([f"1 2+{first}", f"{h - 4 + k} 2", f"1 2+{second}", "40 2"], p1="remy", p2="ken", pos=(400, 440),
+                         build=build)
+            started = F.first(rows, lambda r: r["p"][0]["rno"][1] == 4 and r["p"][0]["cix"] == cix, h)
+            if started is not None and started < end:
+                return True
+        return False
+
+    def test_crouching_lights(self):
+        for first, second, cix in (("LP", "LK", 27), ("LK", "LP", 18)):
+            with self.subTest(first=first, second=second):
+                self.assertFalse(self.chains(first, second, cix, "vanilla"))
+                self.assertTrue(self.chains(first, second, cix, "upper3s"))
+
+    def test_nothing_else(self):
+        self.assertFalse(self.chains("LP", "MK", 30, "upper3s"))
+
+
+class SeanTackle(unittest.TestCase):
+    # SN6 "Allow Fierce Tackle to be faked/cancelled by tapping K during startup." The Tackle is
+    # back, down, forward + P (cmd_data.c: pC_cmd_28). Fierce is the dash animation 26 (koc 5) for
+    # 24 frames; when the punch is still held at its end it grabs (measured), otherwise it ends in
+    # animation 24. Its startup is the dash. The kick is pressed k frames into the dash.
+    @staticmethod
+    def tackle(button, kick_at, build, hold=False):
+        press = f"5+{button}" if hold else "5"
+        rows = F.run(["1 4", "1 2", f"1 6+{button}", f"{kick_at} {press}", f"1 {press}+LK", f"40 {press}"] + F.wait(40),
+                     p1="sean", p2="ken", pos=(300, 360), build=build)
+        start = F.first(rows, lambda r: r["p"][0]["koc"] == 5)
+        free = F.free(rows, 0, start) or len(rows)  # a grab lasts past the end of the log
+        kicked = any(r["p"][0]["koc"] == 4 for r in rows[start:free + 5])
+        grabbed = any(r["p"][1]["rno"][1] == 3 for r in rows)
+        return free - start, kicked, grabbed
+
+    def test_fierce_tackle_feint(self):
+        full = self.tackle("HP", 40, "vanilla")[0]
+        self.assertGreater(full, 25)
+        for k in (3, 8, 15, 20):
+            for hold in (False, True):
+                with self.subTest(k=k, hold=hold):
+                    length, kicked, grabbed = self.tackle("HP", k, "vanilla", hold)
+                    self.assertGreater(length, 20, "the retail Tackle cannot be faked")
+                    length, kicked, grabbed = self.tackle("HP", k, "upper3s", hold)
+                    self.assertLessEqual(length, k + 2, "the Tackle ends when the kick is pressed")
+                    self.assertFalse(kicked, "the kick that fakes it does not come out")
+                    self.assertFalse(grabbed)
+
+    def test_not_after_it_grabs(self):
+        # The punch held through the dash: it grabs Ken, and a kick then changes nothing.
+        for build in ("vanilla", "upper3s"):
+            with self.subTest(build=build):
+                self.assertTrue(self.tackle("HP", 30, build, hold=True)[2])
+
+    def test_only_the_fierce_tackle(self):
+        self.assertEqual(self.tackle("MP", 5, "upper3s")[:2], self.tackle("MP", 5, "vanilla")[:2])
+
+
 class QRushes(unittest.TestCase):
     # Q3 "Allow all overhead/low rushpunches ([4]6P/K/[P]) to be super-cancelled on hit/block/parry.
     # Make the riskier versions at least AS useful as the safe version." Q charges back for 50

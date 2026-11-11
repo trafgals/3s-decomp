@@ -154,6 +154,21 @@ int upper3s_chain_set_startup(Upper3sChain* chain, s16 from, s16 frames);
 int upper3s_chain_set_recovery(Upper3sChain* chain, s16 from, s16 frames);
 
 /*
+ * Sets the tail of the move - the game frames of its straight line from the
+ * game frame `at` of the move to its end - to `frames` game frames, when it
+ * holds `from` (the retail tail). For a move whose chain carries no attack
+ * data, such as a super art that throws a projectile (the projectile is an
+ * effect of its own), the recovery after a point of the animation.
+ */
+int upper3s_chain_set_tail(Upper3sChain* chain, s16 at, s16 from, s16 frames);
+
+/*
+ * The frames of the straight line of the chain (at most `max`), for the
+ * dumps of the tools. Returns their number.
+ */
+s32 upper3s_chain_list(const Upper3sChain* chain, Upper3sFrame* frames, s32 max);
+
+/*
  * The startup of the move (koc, index) of the character `wk`, or -1 when
  * it cannot be read.
  */

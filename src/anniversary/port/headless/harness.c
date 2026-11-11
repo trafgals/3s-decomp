@@ -16,6 +16,8 @@
 //   SF33_LOG=path           per-frame JSON lines from the first scripted frame on
 //   SF33_FRAMES=N           give up after N frames in total (default 6000)
 //   SF33_TRACE_EVERY=N      print the game's state numbers every N frames
+//   SF33_LIST_ATTACKS=koc   (3s' build) list the chains of player 1's slot koc; with
+//   SF33_LIST_FRAMES=ix     also the frames of chain ix, SF33_LIST_BLOCKS=ix its raw blocks
 //
 // Script: one step per line, "#" starts a comment.
 //   <frames> <p1> [<p2>]    hold these inputs for <frames> frames. An input is a numpad
@@ -371,6 +373,20 @@ void harness_begin_frame(unsigned long frame) {
                         }
                     }
 
+                    if (getenv("SF33_LIST_FRAMES") != NULL && atoi(getenv("SF33_LIST_FRAMES")) == ix) {
+                        // The frames of the straight line of the chain: the game frame each starts on, its
+                        // hold and its attack index.
+                        Upper3sFrame frames[U3S_CHAIN_MAX_FRAMES];
+                        s32 nf = upper3s_chain_list(&chain, frames, U3S_CHAIN_MAX_FRAMES);
+                        s32 t = 0;
+
+                        for (s32 f = 0; f < nf; f++) {
+                            printf("  frame %2d at %3d hold %3d att %d\n", (int)f, (int)t, (int)frames[f].hold,
+                                   (int)frames[f].att);
+                            t += frames[f].hold;
+                        }
+                    }
+
                     s32 n = upper3s_chain_attacks(&chain, entries, U3S_CHAIN_MAX_ATTACKS);
                     upper3s_chain_info(&chain, &info);
                     printf("attacks koc %d cix %d base %d startup %d recovery %d entries", koc, ix, chain.base,
@@ -429,7 +445,8 @@ static int hurtboxes(const WORK* w) {
 
 // "hb" is hurtboxes() and "mu" zettai_muteki_flag: a player with the flag is not put into the hit queue
 // (PLCNT.c), so it can be hit only on a frame with hb > 0 and mu 0. "sas" is sa_stop_flag: 2 while the
-// character is frozen by the opponent's superflash (PLS01.c:sa_stop_check()). "par" is the forward ground parry slot of the command buffer: its waza_flag[3] (the window: the parry is
+// character is frozen by the opponent's superflash (PLS01.c:sa_stop_check()). "meo" is cg_meoshi, the
+// frame's target combo route (PLS03.c:check_meoshi_cancel()), "swn" the command buffer's sw_new, "cab" the frame's catch box (cg_ja.caix). "par" is the forward ground parry slot of the command buffer: its waza_flag[3] (the window: the parry is
 // active while it is not 0) and its waza_work[id][3] w_type, shot_ok and free3 (the cooldown: the slot takes
 // no new tap while shot_ok >= 2 and w_type is 11, see CMD_MAIN.c:check_10()). "uk" is ukemi_success, set
 // when the down tap that techs a landing was in time.
@@ -441,7 +458,7 @@ static void log_player(const PLW* p) {
             "\"aix\":%d,\"can\":%d,\"pat\":%d,\"waza\":%d,\"hst\":%d,\"dst\":%d,\"vit\":%d,\"dmv\":%d,\"anum\":%d,"
             "\"pow\":%d,\"piyo\":%d,\"hsme\":%d,\"hsyou\":%d,\"guard\":%d,\"stun\":%d,\"stunmax\":%d,"
             "\"stunned\":%d,\"gauge\":%d,\"stock\":%d,\"stockmax\":%d,\"glen\":%d,\"in\":%d,\"char\":%d,"
-            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d,\"par\":[%d,%d,%d,%d],\"uk\":%d,\"hb\":%d,\"mu\":%d,\"sas\":%d}",
+            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d,\"par\":[%d,%d,%d,%d],\"uk\":%d,\"hb\":%d,\"mu\":%d,\"sas\":%d,\"meo\":%d,\"swn\":%d,\"cab\":%d}",
             w->xyz[0].disp.pos, w->xyz[1].disp.pos, w->rl_flag, w->routine_no[0], w->routine_no[1],
             w->routine_no[2], w->routine_no[3], w->now_koc, w->char_index, w->cg_type, w->cg_hit_ix, w->cg_att_ix,
             w->cg_cancel, w->pat_status, w->kind_of_waza, w->hit_stop, w->dm_stop, w->vital_new, w->dm_vital,
@@ -453,7 +470,7 @@ static void log_player(const PLW* p) {
             p->sa ? p->sa->gauge.i : -1, w->renew_attack < 0 ? -w->renew_attack : w->renew_attack,
             p->cp ? p->cp->waza_flag[3] : -1, waza_work[w->id & 1][3].w_type, waza_work[w->id & 1][3].shot_ok,
             waza_work[w->id & 1][3].free3, p->ukemi_success, hurtboxes(w),
-            p->zettai_muteki_flag, p->sa_stop_flag);
+            p->zettai_muteki_flag, p->sa_stop_flag, w->cg_meoshi, p->cp ? p->cp->sw_new : -1, w->cg_ja.caix);
 }
 
 void harness_end_frame(unsigned long frame) {

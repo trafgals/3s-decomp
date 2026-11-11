@@ -25,3 +25,37 @@ u8 upper3s_ch_alex_cancel_mask(s16 char_ix, u8 cg_cancel) {
         return cg_cancel;
     }
 }
+
+/*
+ * AL4 - the button of the follow-up that was pressed in the cancel window of
+ * the c.LK, per player slot.
+ */
+static u8 alex_tc_pressed[2];
+
+void upper3s_ch_alex_target_combo_buffer(s16 player, s16 char_ix, u8 cg_cancel, u16* sw_new, u16* sw_now) {
+    if ((player < 0) || (player > 1)) {
+        return;
+    }
+
+    if (char_ix != U3S_ALEX_CROUCHING_SHORT) {
+        alex_tc_pressed[player] = 0;
+        return;
+    }
+
+    if (cg_cancel & U3S_CANCEL_TARGET_COMBO) {
+        // A target combo frame: the follow-up pressed earlier is pressed now. check_meoshi_cancel()
+        // wants the button new (sw_new) and held (sw_now) on this frame.
+        if (alex_tc_pressed[player]) {
+            *sw_new |= U3S_ALEX_TC_BUTTON;
+            *sw_now |= U3S_ALEX_TC_BUTTON;
+            alex_tc_pressed[player] = 0;
+        }
+
+        return;
+    }
+
+    if ((cg_cancel & (U3S_CANCEL_SPECIAL | U3S_CANCEL_SUPER)) && (*sw_new & U3S_ALEX_TC_BUTTON)) {
+        // The cancel window, before the target combo frames.
+        alex_tc_pressed[player] = 1;
+    }
+}

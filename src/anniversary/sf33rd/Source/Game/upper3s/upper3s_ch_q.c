@@ -50,3 +50,13 @@ u8 upper3s_ch_q_special_cancel_mask(s16 char_ix, u8 cg_cancel) {
 
     return cg_cancel;
 }
+
+u8 upper3s_ch_q_active_cancel_mask(s16 char_ix, s16 frame, u8 cg_cancel) {
+    // Q5: every active frame of 4HK, and the hitstop after its hit, can be cancelled into a special
+    // move or a super art. (0x03: U3S_FRAME_ACTIVE | U3S_FRAME_HITSTOP of upper3s.h.)
+    if ((char_ix == U3S_Q_BACK_ROUNDHOUSE) && (frame & 0x03)) {
+        return (u8)(cg_cancel | U3S_CANCEL_SPECIAL | U3S_CANCEL_SUPER);
+    }
+
+    return cg_cancel;
+}

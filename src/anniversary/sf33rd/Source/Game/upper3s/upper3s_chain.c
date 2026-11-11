@@ -702,6 +702,68 @@ int upper3s_chain_set_recovery(Upper3sChain* chain, s16 from, s16 frames) {
 }
 
 /*
+ * Sets the frames of the move from the game frame `at` to its end to `frames`
+ * game frames.
+ */
+int upper3s_chain_set_tail(Upper3sChain* chain, s16 at, s16 from, s16 frames) {
+    Upper3sFrame chain_frames[U3S_CHAIN_MAX_FRAMES];
+    s32 n;
+    s32 i;
+    s32 first;
+    s32 elapsed;
+    s32 total;
+    s32 stopped;
+
+    if ((chain == NULL) || (frames < 0) || (from < 0) || (at < 0)) {
+        return 0;
+    }
+
+    n = upper3s_chain_frames(chain, chain_frames, U3S_CHAIN_MAX_FRAMES, &stopped);
+
+    if (stopped != 0) {
+        /* The end of the move is not known. */
+        return 0;
+    }
+
+    /* The first frame that starts at or after `at`. */
+    elapsed = 0;
+    first = n;
+
+    for (i = 0; i < n; i++) {
+        if (elapsed >= at) {
+            first = i;
+            break;
+        }
+
+        elapsed += chain_frames[i].hold;
+    }
+
+    if ((first >= n) || (elapsed != at)) {
+        /* No frame starts at `at`: not the chain that is expected. */
+        return 0;
+    }
+
+    total = 0;
+
+    for (i = first; i < n; i++) {
+        total += chain_frames[i].hold;
+    }
+
+    if (total != from) {
+        /* Not the retail chain - unless the change is already there. */
+        return (total == frames);
+    }
+
+    return upper3s_chain_shorten(chain, chain_frames, first, n, frames);
+}
+
+s32 upper3s_chain_list(const Upper3sChain* chain, Upper3sFrame* frames, s32 max) {
+    s32 stopped;
+
+    return upper3s_chain_frames(chain, frames, max, &stopped);
+}
+
+/*
  * The startup of the move (koc, index) of the character `wk`.
  */
 s16 upper3s_chain_startup(WORK* wk, s16 koc, s16 index) {

@@ -171,6 +171,15 @@ void upper3s_apply_move(WORK* wk, const Upper3sMove* move) {
      * the attack table, so it is patched first and on its own: a move
      * whose startup is changed does not have to carry attack data.
      */
+    if (move->flags & U3S_MV_TAIL) {
+        Upper3sChain chain;
+
+        if (!upper3s_chain_open(wk, move->koc, move->index, &chain) ||
+            !upper3s_chain_set_tail(&chain, move->tail_at, move->tail_from, move->tail)) {
+            upper3s_note_failure(move, U3S_MV_TAIL);
+        }
+    }
+
     if (move->flags & (U3S_MV_STARTUP | U3S_MV_RECOVERY)) {
         Upper3sChain chain;
 

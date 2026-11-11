@@ -1847,8 +1847,13 @@ s32 check_cg_cancel_data(PLW* wk) {
     // the punch is held: assignment 25, animation 33), so for special moves (koc 5) the animation that is
     // playing, wk->wu.char_index, is passed instead of the assignment's.
     if (wk->as != NULL) {
+        // The rules that depend on the input: a target combo follow-up pressed early is kept for the frames
+        // of the target combo (AL4), Remy's crouching lights chain into each other (RM6).
+        upper3s_cancel_input(wk);
         wk->wu.cg_cancel = upper3s_cancel_mask(wk->player_number, wk->wu.now_koc,
                                                (wk->wu.now_koc == 5) ? wk->wu.char_index : wk->as->char_ix,
+                                               ((wk->wu.cg_ja.atix != 0) ? U3S_FRAME_ACTIVE : 0) |
+                                                   ((wk->wu.hit_stop != 0) ? U3S_FRAME_HITSTOP : 0),
                                                wk->wu.cg_cancel);
     }
 #endif

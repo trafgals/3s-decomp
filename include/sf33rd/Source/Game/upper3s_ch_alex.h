@@ -94,6 +94,7 @@
  *   2MK 30    3MK 31    1MK 32     2HK 33    3HK 34    1HK 35
  */
 enum {
+    U3S_ALEX_CROUCHING_SHORT = 27,  /* 2LK */
     U3S_ALEX_CROUCHING_STRONG = 21, /* 2MP */
     U3S_ALEX_CROUCHING_FORWARD = 30 /* 2MK */
 };
@@ -110,5 +111,26 @@ enum {
  * that is, the index of the move in the assignment table of the disc.
  */
 u8 upper3s_ch_alex_cancel_mask(s16 char_ix, u8 cg_cancel);
+
+/*
+ * AL4 - "Increase the cancel window for his Target Combo (cr.Short->cr.Fwd) to
+ * be longer than 1f, so that it can be done as easily as any other Target
+ * Combo in the game."
+ *
+ * Measured: the c.LK carries the target combo bit (0x08) on the 4 frames after
+ * its cancel window only, with the route of the c.MK (`cg_meoshi` 0xa02) on
+ * the first 2 of them, so the c.MK comes out when MK is pressed on 2 frames;
+ * Ken's s.MP -> s.HP carries it through the whole cancel window, hitstop
+ * included (11 frames). The destination of a target combo is in the chain
+ * data of its frames (PLS03.c:check_meoshi_cancel() -> char_move_cmms2()),
+ * so the bit cannot simply be given to earlier frames (measured: the chain
+ * then jumps to animation 0). Instead MK pressed in the c.LK's cancel window
+ * (the frames with its special and super bits) is kept, and pressed again on
+ * the first target combo frame (new and held: `cp->sw_new` and `cp->sw_now`;
+ * the lever is the player's).
+ */
+#define U3S_ALEX_TC_BUTTON 0x200 /* MK */
+
+void upper3s_ch_alex_target_combo_buffer(s16 player, s16 char_ix, u8 cg_cancel, u16* sw_new, u16* sw_now);
 
 #endif /* UPPER3S_CH_ALEX_H */

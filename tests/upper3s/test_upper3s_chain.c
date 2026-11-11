@@ -493,6 +493,42 @@ int main(void) {
     check(upper3s_chain_info(&chain, &info) == 1, "the chain of the Ryuubi Kyaku is read again");
     check(info.recovery == 1, "the Ryuubi Kyaku still has 1 frame after the hit");
 
+    /* The tail: the frames from a game frame of the move to its end. */
+    {
+        Upper3sFrame frames[U3S_CHAIN_MAX_FRAMES];
+        s32 n;
+        s32 i;
+        s16 at;
+        s16 total = 0;
+        s16 after = 0;
+
+        setup_chains(U3S_SEAN);
+        setup_character(&wk);
+        check(upper3s_chain_open(&wk.wu, U3S_KOC_ATTACK, 32, &chain) == 1, "the chain opens for the tail");
+        n = upper3s_chain_list(&chain, frames, U3S_CHAIN_MAX_FRAMES);
+        check(n > 2, "the chain has frames");
+        at = (s16)frames[0].hold;
+
+        for (i = 1; i < n; i++) {
+            total = (s16)(total + frames[i].hold);
+        }
+
+        check(upper3s_chain_set_tail(&chain, at, (s16)(total + 1), (s16)(total - 1)) == 0,
+              "a tail that does not hold the retail frames is left alone");
+        check(upper3s_chain_set_tail(&chain, (s16)(at + 1), total, (s16)(total - 1)) == 0 || frames[0].hold == 0,
+              "a tail must start where a frame starts");
+        check(upper3s_chain_set_tail(&chain, at, total, (s16)(total - 1)) == 1, "the tail is shortened by a frame");
+        n = upper3s_chain_list(&chain, frames, U3S_CHAIN_MAX_FRAMES);
+
+        for (i = 1; i < n; i++) {
+            after = (s16)(after + frames[i].hold);
+        }
+
+        check(after == total - 1, "the tail is one frame shorter");
+        check(frames[0].hold == at, "the frames before the tail are untouched");
+        check(upper3s_chain_set_tail(&chain, at, total, (s16)(total - 1)) == 1, "a tail that already holds the target counts as done");
+    }
+
     setup_chains(U3S_Q);
     setup_character(&wk);
     check(upper3s_chain_open(&wk.wu, U3S_KOC_NORMAL, 3, &chain) == 1,

@@ -101,6 +101,16 @@ const Upper3sMove upper3s_moves_sean[] = {
      */
     { U3S_KOC_ATTACK, 32, U3S_MV_STARTUP, 0, 0, 0, 0, 0, 0, 0, 25, 19, 0, 0 }, /* light, medium and heavy */
     /*
+     * SN11 - "Decrease recovery on Hadou Burst from 61f to 51f."
+     * The Hadou Burst (SA I) is special move animation 36 (37-39 share its chain). Its chain has no
+     * attack data: the projectile is an effect of its own. Measured: the move starts on the frame of
+     * the superflash; from chain frame 53 (the frames after the throw) Sean is not actionable for 60
+     * game frames (61 in the post's count), then actionable for the last 10 frames of the chain. The
+     * frames from 53 to the end, 70 in all, are brought to 60, the longest first, so the recovery
+     * becomes 51 (50 in this count).
+     */
+    { U3S_KOC_ATTACK, 36, U3S_MV_TAIL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 70, 60 }, /* Hadou Burst */
+    /*
      * 3s': "Reduce startup of L/M/H/EX Dragon Smash (623P) from 5/5/9/8f to
      * 3/4/5/3f.  Somewhere between Ken and Ryu."
      *
