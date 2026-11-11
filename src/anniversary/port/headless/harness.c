@@ -24,12 +24,17 @@
 //                           5, 2+MK, 6+LP+LK, 5+HP+HK. Buttons: LP MP HP LK MK HK.
 //   @pos <x1> <x2>          place the players at these x positions (screen units)
 //   @stocks <p> <n>         give player p (1 or 2) n super art stocks
+//   @vit <p> <n>            set player p's health (bar units, 160 is full)
+//   @vitmode <n>            the health mode of both players (SysDir.c:omop_vital_ix, read by
+//                           PLMAIN.c:check_omop_vital(); 0 is a normal fight, in which health does
+//                           not come back and a character can be knocked out)
 //   @end                    stop here (the run also stops at the end of the script)
 // Exit code: 0 when the script ran to its end, 2 when the fight never started.
 
 #include "port/headless/headless.h"
 #include "common.h"
 #include "sf33rd/Source/Game/PLCNT.h"
+#include "sf33rd/Source/Game/SysDir.h"
 #include "sf33rd/Source/Game/cmd_data.h"
 #include "sf33rd/Source/Game/debug/Debug.h"
 #include "sf33rd/Source/Game/workuser.h"
@@ -62,7 +67,7 @@ void Loop_Demo_Sub();
 #define IN_MK 0x200
 #define IN_HK 0x400
 
-typedef enum { STEP_INPUT, STEP_POS, STEP_STOCKS, STEP_END } StepKind;
+typedef enum { STEP_INPUT, STEP_POS, STEP_STOCKS, STEP_VIT, STEP_VITMODE, STEP_END } StepKind;
 
 typedef struct {
     StepKind kind;
@@ -179,6 +184,13 @@ static void load_script(const char* path) {
             s->kind = STEP_STOCKS;
             s->args[0] = atoi(b) - 1;
             s->args[1] = atoi(c);
+        } else if (strcmp(a, "@vit") == 0 && n == 3) {
+            s->kind = STEP_VIT;
+            s->args[0] = atoi(b) - 1;
+            s->args[1] = atoi(c);
+        } else if (strcmp(a, "@vitmode") == 0 && n == 2) {
+            s->kind = STEP_VITMODE;
+            s->args[0] = atoi(b);
         } else if (isdigit((unsigned char)a[0]) && n >= 2) {
             s->kind = STEP_INPUT;
             s->frames = atoi(a);
@@ -281,6 +293,17 @@ static int advance_script(void) {
                 SA_WORK* sa = plw[s->args[0]].sa;
                 sa->store = s->args[1] > sa->store_max ? sa->store_max : s->args[1];
             }
+            break;
+
+        case STEP_VIT:
+            if (s->args[0] == 0 || s->args[0] == 1) {
+                plw[s->args[0]].wu.vital_new = s->args[1];
+                plw[s->args[0]].wu.vital_old = s->args[1];
+            }
+            break;
+
+        case STEP_VITMODE:
+            omop_vital_ix[0] = omop_vital_ix[1] = s->args[0];
             break;
 
         case STEP_INPUT:
@@ -386,7 +409,27 @@ void harness_begin_frame(unsigned long frame) {
     step_left -= 1;
 }
 
-// "par" is the forward ground parry slot of the command buffer: its waza_flag[3] (the window: the parry is
+// The number of hurtboxes of a work on this frame: the boxes of body_dm (HITCHECK.c:attack_hit_check() reads
+// four of them) whose width, the second word, is not 0. A frame without one cannot be hit.
+static int hurtboxes(const WORK* w) {
+    int n = 0;
+
+    if (w->h_bod == NULL) {
+        return -1;
+    }
+
+    for (int i = 0; i < 4; i++) {
+        if (w->h_bod->body_dm[i][1] != 0) {
+            n += 1;
+        }
+    }
+
+    return n;
+}
+
+// "hb" is hurtboxes() and "mu" zettai_muteki_flag: a player with the flag is not put into the hit queue
+// (PLCNT.c), so it can be hit only on a frame with hb > 0 and mu 0. "sas" is sa_stop_flag: 2 while the
+// character is frozen by the opponent's superflash (PLS01.c:sa_stop_check()). "par" is the forward ground parry slot of the command buffer: its waza_flag[3] (the window: the parry is
 // active while it is not 0) and its waza_work[id][3] w_type, shot_ok and free3 (the cooldown: the slot takes
 // no new tap while shot_ok >= 2 and w_type is 11, see CMD_MAIN.c:check_10()). "uk" is ukemi_success, set
 // when the down tap that techs a landing was in time.
@@ -398,7 +441,7 @@ static void log_player(const PLW* p) {
             "\"aix\":%d,\"can\":%d,\"pat\":%d,\"waza\":%d,\"hst\":%d,\"dst\":%d,\"vit\":%d,\"dmv\":%d,\"anum\":%d,"
             "\"pow\":%d,\"piyo\":%d,\"hsme\":%d,\"hsyou\":%d,\"guard\":%d,\"stun\":%d,\"stunmax\":%d,"
             "\"stunned\":%d,\"gauge\":%d,\"stock\":%d,\"stockmax\":%d,\"glen\":%d,\"in\":%d,\"char\":%d,"
-            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d,\"par\":[%d,%d,%d,%d],\"uk\":%d}",
+            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d,\"par\":[%d,%d,%d,%d],\"uk\":%d,\"hb\":%d,\"mu\":%d,\"sas\":%d}",
             w->xyz[0].disp.pos, w->xyz[1].disp.pos, w->rl_flag, w->routine_no[0], w->routine_no[1],
             w->routine_no[2], w->routine_no[3], w->now_koc, w->char_index, w->cg_type, w->cg_hit_ix, w->cg_att_ix,
             w->cg_cancel, w->pat_status, w->kind_of_waza, w->hit_stop, w->dm_stop, w->vital_new, w->dm_vital,
@@ -409,7 +452,8 @@ static void log_player(const PLW* p) {
             p->sa ? p->sa->kind_of_arts : -1, w->original_vitality, p->sa ? p->sa->total_gauge : -1,
             p->sa ? p->sa->gauge.i : -1, w->renew_attack < 0 ? -w->renew_attack : w->renew_attack,
             p->cp ? p->cp->waza_flag[3] : -1, waza_work[w->id & 1][3].w_type, waza_work[w->id & 1][3].shot_ok,
-            waza_work[w->id & 1][3].free3, p->ukemi_success);
+            waza_work[w->id & 1][3].free3, p->ukemi_success, hurtboxes(w),
+            p->zettai_muteki_flag, p->sa_stop_flag);
 }
 
 void harness_end_frame(unsigned long frame) {

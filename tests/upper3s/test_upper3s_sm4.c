@@ -78,7 +78,9 @@ static s16 sm4_table_back[SM4_TABLE_SIZE] = {
 static void build_charge(WAZA_WORK* work, s16* table, s16 lever, s16 held, s16 timer) {
     s16 counter = SM4_CHARGE_TIME - held;
 
+    /* A new scenario: no charge is running, which forgets the earlier resets. */
     memset(work, 0, sizeof(*work));
+    upper3s_sm4_charge_partition(0, work, 1);
 
     work->w_type = UPPER3S_SM4_CHARGE_TYPE;
     work->w_int = timer;
@@ -98,27 +100,45 @@ static void test_one_third_resets_the_timer(void) {
     // A charge that has just reached one third, with a partition timer that
     // is nearly over - the situation the retail game leaves to chance.
     build_charge(&work[0], sm4_table_back, 0x8, SM4_ONE_THIRD, 3);
-    upper3s_sm4_charge_partition(work, UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
     check(work[0].w_int == SM4_TIMER_MAX, "the partition timer is reset to its maximum at one third of the charge");
 
     // The same for the charge that is done down.
     build_charge(&work[0], sm4_table_down, 0x2, SM4_ONE_THIRD, 3);
-    upper3s_sm4_charge_partition(work, UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
     check(work[0].w_int == SM4_TIMER_MAX, "the partition timer of a down charge is reset at one third");
 
-    // A charge that is further along is reset as well.
+    // The reset happens once: after it the timer counts down while the
+    // direction is released, and running out still ends the charge.
+    build_charge(&work[0], sm4_table_back, 0x8, SM4_ONE_THIRD, 3);
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
+    work[0].w_int = 10; /* released for a while */
+    work[0].free1 = SM4_CHARGE_TIME - SM4_ONE_THIRD - 5; /* and held again */
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
+    check(work[0].w_int == 10, "the partition timer is reset only once in a charge");
+
+    // A charge that restarts (the step is read again: free1 is full) can be
+    // reset again when it reaches one third.
+    work[0].free1 = SM4_CHARGE_TIME;
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
+    work[0].free1 = SM4_CHARGE_TIME - SM4_ONE_THIRD;
+    work[0].w_int = 4;
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
+    check(work[0].w_int == SM4_TIMER_MAX, "a new charge is reset again at one third");
+
+    // A charge that is already further along when it is first seen is reset.
     build_charge(&work[0], sm4_table_back, 0x8, SM4_CHARGE_TIME, 3);
-    upper3s_sm4_charge_partition(work, UPPER3S_SM4_WAZA_COUNT);
-    check(work[0].w_int == SM4_TIMER_MAX, "the partition timer stays at its maximum while the charge is held");
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
+    check(work[0].w_int == SM4_TIMER_MAX, "a charge past one third is reset");
 
     // A charge that has not reached one third keeps the timer it has.
     build_charge(&work[0], sm4_table_back, 0x8, SM4_ONE_THIRD - 1, 3);
-    upper3s_sm4_charge_partition(work, UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
     check(work[0].w_int == 3, "the partition timer is untouched before one third of the charge");
 
     // A charge that has not started keeps the timer it has.
     build_charge(&work[0], sm4_table_back, 0x8, 0, 3);
-    upper3s_sm4_charge_partition(work, UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
     check(work[0].w_int == 3, "the partition timer is untouched before the charge has started");
 }
 
@@ -130,11 +150,11 @@ static void test_exact_lever_uses_free2(void) {
     WAZA_WORK work[UPPER3S_SM4_WAZA_COUNT];
 
     build_charge(&work[0], sm4_table_down, (s16)(0x8000 | 0x2), SM4_ONE_THIRD, 3);
-    upper3s_sm4_charge_partition(work, UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
     check(work[0].w_int == SM4_TIMER_MAX, "a charge whose lever has to match exactly is reset at one third");
 
     build_charge(&work[0], sm4_table_down, (s16)(0x8000 | 0x2), SM4_ONE_THIRD - 1, 3);
-    upper3s_sm4_charge_partition(work, UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
     check(work[0].w_int == 3, "a charge whose lever has to match exactly is not reset before one third");
 }
 
@@ -151,12 +171,12 @@ static void test_other_commands_are_untouched(void) {
     work[0].w_lvr = 0x8;
     work[0].free1 = SM4_CHARGE_TIME - SM4_ONE_THIRD;
     work[0].w_ptr = &sm4_table_back[SM4_NEXT_RECORD];
-    upper3s_sm4_charge_partition(work, UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
     check(work[0].w_int == 3, "a command that is not a charge is not touched");
 
     // A charge that is done up is not a charge direction.
     build_charge(&work[0], sm4_table_back, 0x1, SM4_ONE_THIRD, 3);
-    upper3s_sm4_charge_partition(work, UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
     check(work[0].w_int == 3, "a charge that is not done in back or down is not touched");
 
     // A command without a table behind it must not be read.
@@ -166,7 +186,7 @@ static void test_other_commands_are_untouched(void) {
     work[0].w_lvr = 0x8;
     work[0].free1 = SM4_CHARGE_TIME - SM4_ONE_THIRD;
     work[0].w_ptr = NULL;
-    upper3s_sm4_charge_partition(work, UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(0, work, UPPER3S_SM4_WAZA_COUNT);
     check(work[0].w_int == 3, "a charge without a command table is not touched");
 }
 

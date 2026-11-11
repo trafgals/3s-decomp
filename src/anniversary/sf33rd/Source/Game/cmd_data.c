@@ -569,8 +569,19 @@ const s16 pE_CMD_22[37] = { 12, 0,  0, 17,     17, 17, 17, 5,      4, 5,  6, 23,
 const s16 pE_cmd_24[33] = { 12, 0, 0, 24, 24, 24, 24, 259, 18, 18, 18, 18, 6,  0, 0,   16, 6,
                             10, 0, 0, 6,  10, 0,  16, 22,  16, 0,  4,  6,  10, 0, 256, 28 };
 
+// Gouki's Kongou Kokuretsu Zan (the KKZ): down, neutral, down, neutral, down (steps of type 22 and 10, the
+// lever 0x8002 is exactly down), then any two punches: the four strengths all use button index 19 of
+// PLS03.c:cmdshot_conv_tbl[], the one of the EX specials (bit 0x80, two punches or more). Measured:
+// D,D,D+PP gives the KKZ in the retail game, D,D+PP a normal.
+#if defined(UPPER_3S)
+// Third Strike Upper (AK3): "KKZ (hidden super) motion changed from D,D,D+PPP to D,D+PP." The punches are
+// already PP in this version; one down and its neutral are removed.
+const s16 pE_cmd_25[25] = { 12, 0, 0, 26, 26, 26, 26,     5,  19, 19, 19, 19, 22, 1, 1,      -32766, 10,
+                            6,  0, 0, 10, 6,  0,  -32766, 28 };
+#else
 const s16 pE_cmd_25[33] = { 12, 0, 0, 26, 26, 26, 26,     5,  19, 19, 19, 19, 22, 1, 1,      -32766, 10,
                             6,  0, 0, 10, 6,  0,  -32766, 10, 6,  0,  0,  10, 6,  0, -32766, 28 };
+#endif
 
 const s16 pE_cmd_28[25] = { 12, 1, 0,      23, 23, 23, 23,     5, 19, 19, 23,     23, 27,
                             1,  0, -32764, 1,  5,  0,  -32766, 1, 10, 0,  -32762, 28 };

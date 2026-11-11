@@ -104,4 +104,46 @@ enum {
  */
 u8 upper3s_ch_q_cancel_mask(s16 char_ix, u8 cg_cancel);
 
+/*
+ * Q12 - "Decrease health bonus for having 1-3 Personal Actions (taunts) from
+ * 1200 health base/1400/1705/2050 to 1200 health base/1400/1600/1800."
+ *
+ * A taunt adds to `PLW.tk_konjyou` (PLPAT18.c: +4 per taunt, at most 12),
+ * and the damage Q takes is multiplied by (32 - tk_konjyou) / 32
+ * (PLS02.c:cal_dm_vital_gauge_hosei()). In this version that is effective
+ * health x1, x1.143, x1.333 and x1.6 (1200/1371/1600/1920); measured, Ken's
+ * standing Fierce does 20, 17, 15 and 12 to Q after 0-3 taunts. The post's
+ * retail numbers are not these (they come from a measurement with rounding,
+ * or another version), so the change is applied as the post's relative
+ * reduction: the first taunt is unchanged, the second gives 6.2% less
+ * effective health (1705 -> 1600) and the third 12.2% less (2050 -> 1800).
+ * On this version's values that is 1600 -> 1501 and 1920 -> 1686, i.e.
+ * tk_konjyou 6.4 and 9.2; the bonus after 1, 2 and 3 taunts becomes 4, 6 and
+ * 9 (effective health 1371/1477/1670).
+ *
+ * `upper3s_ch_q_taunt_konjyou` returns the bonus after one more taunt.
+ */
+#define U3S_Q_TAUNT_KONJYOU_1 4
+#define U3S_Q_TAUNT_KONJYOU_2 6
+#define U3S_Q_TAUNT_KONJYOU_3 9
+
+s16 upper3s_ch_q_taunt_konjyou(s16 konjyou);
+
+/*
+ * Q3 - "Allow all overhead/low rushpunches ([4]6P/K/[P]) to be super-cancelled
+ * on hit/block/parry. Make the riskier versions at least AS useful as the safe
+ * version."
+ *
+ * Q's back-charge specials (special move data, koc 5), measured: [4]6+P is
+ * animation 24/25/26 for LP/MP/HP and 27 for EX, the mid rush, which the
+ * retail game already lets cancel into a super art; holding the punch about
+ * 20 frames turns it into 32/33/34, the overhead version; [4]6+K is 28/29/30
+ * and 31 for EX, the low version. Neither the overheads nor the lows can be
+ * super-cancelled in the retail game.
+ */
+#define U3S_Q_RUSH_LOW_FIRST 28
+#define U3S_Q_RUSH_OVERHEAD_LAST 34
+
+u8 upper3s_ch_q_special_cancel_mask(s16 char_ix, u8 cg_cancel);
+
 #endif /* UPPER3S_CH_Q_H */

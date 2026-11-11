@@ -439,15 +439,20 @@ def check_remaining(md, chars):
 
     work = [s for none, s in items if not none]
     counts = {"all": len(work), "none": sum(1 for none, _ in items if none), "verified": work.count("verified"),
-              "done": work.count("done"), "partial": work.count("partial"), "open": work.count("—")}
+              "done": work.count("done"), "partial": work.count("partial"), "open": work.count("—"),
+              "na": work.count("n/a")}
+    # "n/a" is an item whose fix is not needed in this version (the bug it fixes is not there).
     m = re.search(r"\*\*(\d+) work items\*\* \(plus (\d+) \"no change\" items\)\. On `main`: all (\d+) open\. "
                   r"On this branch: (\d+) verified in a fight test, (\d+) done but not yet measured, (\d+) partial, "
-                  r"(\d+) not done\.", md)
+                  r"(\d+) not done(?:, (\d+) not needed in this version)?\.", md)
     if check(m is not None, "remaining.md: summary line not found"):
-        got = dict(zip(("all", "none", "main", "verified", "done", "partial", "open"), map(int, m.groups())))
-        for k in ("all", "none", "verified", "done", "partial", "open"):
+        got = dict(zip(("all", "none", "main", "verified", "done", "partial", "open", "na"),
+                       (int(g) if g is not None else 0 for g in m.groups())))
+        for k in ("all", "none", "verified", "done", "partial", "open", "na"):
             check(got[k] == counts[k], f"remaining.md summary: {k} is {got[k]}, the tables give {counts[k]}")
         check(got["main"] == counts["all"], "remaining.md summary: 'all N open' does not match the item count")
+        check(sum(counts[k] for k in ("verified", "done", "partial", "open", "na")) == counts["all"],
+              "remaining.md: the statuses do not add up to the item count")
     return counts
 
 

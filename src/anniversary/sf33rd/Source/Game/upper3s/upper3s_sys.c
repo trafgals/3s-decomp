@@ -103,34 +103,64 @@ void upper3s_sys_whiff_contact(WORK* as, WORK* ds, s16 type) {
     }
 }
 
-s16 upper3s_sys_crossup_permille(WORK* as, WORK* ds) {
-    /* The defender has to be in a block animation. */
+/*
+ * SM5 - the defender is in a combo that started with a hit from the side it
+ * was not facing while it was blocking.
+ */
+static u8 upper3s_crossup_combo[U3S_SYS_PLAYERS];
+
+/*
+ * SM5 - the defender is blocking: in the block posture of the normal state
+ * group (states 27-30, PLPNM.c:Normal_27000(), taken when an attack comes
+ * near while back is held) or in a block reaction of the damage group
+ * (reactions 4-11, PLPDM.c:Damage_04000()/Damage_07000()). Both set
+ * `guard_chuu` from `guard_kind[]`. Normal states 31-35 are parries, not
+ * blocks (set_paring_status()). Confirmed from the source.
+ */
+static s16 upper3s_sys_blocking(WORK* ds) {
     if (ds->routine_no[1] == 0) {
-        if ((ds->routine_no[2] <= 30) || (ds->routine_no[2] >= 36)) {
-            return 1000;
-        }
-    } else if (ds->routine_no[1] == 1) {
-        if ((ds->routine_no[2] <= 3) || (ds->routine_no[2] >= 8)) {
-            return 1000;
-        }
-    } else {
+        return (ds->routine_no[2] >= 27) && (ds->routine_no[2] <= 30);
+    }
+
+    if (ds->routine_no[1] == 1) {
+        return (ds->routine_no[2] >= 4) && (ds->routine_no[2] <= 11);
+    }
+
+    return 0;
+}
+
+s16 upper3s_sys_crossup_permille(WORK* as, WORK* ds) {
+    s16 player = upper3s_sys_player_of(ds);
+    s16 away;
+
+    if ((player < 0) || (player >= U3S_SYS_PLAYERS)) {
         return 1000;
     }
 
-    /* The defender has to be facing away from the attacker. */
+    /* The defender faces away from the attacker. */
     if (ds->xyz[0].disp.pos > as->xyz[0].disp.pos) {
-        /* The attacker is on the left: the defender has to look right. */
-        if (ds->rl_flag != 1) {
-            return 1000;
-        }
+        /* The attacker is on the left: facing right is facing away. */
+        away = ds->rl_flag == 1;
     } else {
-        /* The attacker is on the right: the defender has to look left. */
-        if (ds->rl_flag != 0) {
-            return 1000;
-        }
+        away = ds->rl_flag == 0;
     }
 
-    return 500;
+    if (upper3s_sys_blocking(ds)) {
+        /* "any time a character is hit during block animation while they
+         * are facing the opposite direction from the hit, the damage scaling
+         * is reduced to 50% for that hit and the followup combo" */
+        upper3s_crossup_combo[player] = away;
+        return away ? 500 : 1000;
+    }
+
+    if (upper3s_crossup_combo[player] && (ds->routine_no[1] == 1)) {
+        /* The followup combo: the defender has been in hitstun since. */
+        return 500;
+    }
+
+    /* A new hit on a defender that was free (or a new combo). */
+    upper3s_crossup_combo[player] = 0;
+    return 1000;
 }
 
 s16 upper3s_sys_health_source(s16 char_id, s16* scale) {

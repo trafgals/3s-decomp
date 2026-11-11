@@ -87,11 +87,13 @@
 /*
  * B1 - a successful throw is invincible for its whole animation.
  *
- * `upper3s_throw_invuln_start` is called when the throw connects and
- * `upper3s_throw_frame` releases the victim again when the throw animation
- * is over.
+ * `upper3s_throw_invuln_start` (the victim) and
+ * `upper3s_throw_invuln_start_thrower` are called when the throw connects,
+ * and `upper3s_throw_frame` releases each of them again when its part of the
+ * throw is over.
  */
 void upper3s_throw_invuln_start(PLW* victim);
+void upper3s_throw_invuln_start_thrower(PLW* thrower);
 void upper3s_throw_invuln_end(PLW* victim);
 void upper3s_throw_frame(PLW* wk);
 

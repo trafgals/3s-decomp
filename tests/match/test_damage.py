@@ -63,6 +63,49 @@ class Damage(unittest.TestCase):
         self.assertAlmostEqual(first[1] / first[0], 95 / 107, delta=0.03)
 
 
+    def test_ken_throw_ko_on_makoto(self):
+        # KN4 "Fix the crash when killing Makoto with a neutral throw (may not be present in this
+        # version)." Makoto is left with 5 health and the health mode that does not refill it
+        # (@vitmode 0); each of Ken's throws knocks her out and the fight goes on.
+        for throw in ("5+LP+LK", "6+LP+LK", "4+LP+LK"):
+            for build in ("vanilla", "upper3s"):
+                with self.subTest(throw=throw, build=build):
+                    script = ["@vitmode 0", "@vit 2 5", "5 5 5", f"1 {throw} 5", "700 5 5"]
+                    rows = F.run(script, p1="ken", p2="makoto", pos=(400, 440), build=build)
+                    self.assertTrue(any(r["p"][1]["vit"] < 0 for r in rows), "knocked out")
+                    self.assertGreaterEqual(len(rows), 3 + 5 + 1 + 700, "the fight went on to the end of the script")
+
+    def test_akuma_kkz_motion(self):
+        # AK3 "KKZ (hidden super) motion changed from D,D,D+PPP to D,D+PP." In this version the
+        # command already takes any two punches; 3s' drops the third down. The KKZ is animation 63.
+        def kkz(motion, build):
+            rows = F.run(["@stocks 1 3"] + motion + F.wait(60), p1="akuma", p2="ken", pos=(400, 440), build=build)
+            return any(r["p"][0]["koc"] == 5 and r["p"][0]["cix"] == 63 for r in rows)
+
+        three = ["1 2", "1 5", "1 2", "1 5", "1 2+LP+MP"]
+        two = ["1 2", "1 5", "1 2+LP+MP"]
+        self.assertTrue(kkz(three, "vanilla"))
+        self.assertFalse(kkz(two, "vanilla"))
+        self.assertTrue(kkz(two, "upper3s"))
+        self.assertTrue(kkz(three, "upper3s"))
+        self.assertTrue(kkz(["1 2", "1 5", "1 2+LP+MP+HP"], "upper3s"))
+
+    def test_q_taunt_health_bonus(self):
+        # Q12 "Decrease health bonus for having 1-3 Personal Actions (taunts) from 1200 health
+        # base/1400/1705/2050 to 1200 health base/1400/1600/1800." Q taunts n times, then takes
+        # Ken's standing Fierce. The retail bonus is (32 - 4n)/32 of the damage; 3s' keeps the
+        # first taunt and makes the second and third 6.2% and 12.2% weaker (upper3s_ch_q.h).
+        def damage(n, build):
+            script = []
+            for _ in range(n):
+                script += ["1 5+HP+HK 5", "140 5 5"]
+            rows = F.run(script + ["@pos 400 440", "1 5 5+HP", "60 5 5"], p1="q", p2="ken", pos=(200, 600), build=build)
+            return bar_lost(rows, 0)
+
+        self.assertEqual([damage(n, "vanilla") for n in range(5)], [20, 17, 15, 12, 12])
+        self.assertEqual([damage(n, "upper3s") for n in range(5)], [20, 17, 16, 14, 14])
+
+
 class Stun(unittest.TestCase):
     def test_makoto_abare_tosanami_does_half_the_stun(self):
         # MK1 "Stun damage of Abare Tosanami (SAII) reduced by 50%." It only connects from near

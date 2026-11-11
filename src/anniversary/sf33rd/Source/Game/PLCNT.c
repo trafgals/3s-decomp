@@ -385,12 +385,12 @@ void Player_control() {
     set_scrrrl();
     player_main_process[pcon_rno[0]]();
 #if defined(UPPER_3S)
-    // 3s' SM4: the partition timer of a charge is reset to its maximum as
-    // soon as the charged direction has reached one third of its charge, so
-    // the charge can always be partitioned in the full window.  The command
+    // 3s' SM4: the partition timer of a charge is reset to its maximum once,
+    // when the charged direction reaches one third of its charge, so the
+    // charge can always be partitioned in the full window.  The command
     // system has already run above, so the state of the charges is current.
-    upper3s_sm4_charge_partition(waza_work[plw[0].wu.id], UPPER3S_SM4_WAZA_COUNT);
-    upper3s_sm4_charge_partition(waza_work[plw[1].wu.id], UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(plw[0].wu.id, waza_work[plw[0].wu.id], UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(plw[1].wu.id, waza_work[plw[1].wu.id], UPPER3S_SM4_WAZA_COUNT);
 #endif
     check_body_touch();
     check_damage_hosei();

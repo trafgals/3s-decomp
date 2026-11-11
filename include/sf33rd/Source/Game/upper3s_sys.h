@@ -52,9 +52,12 @@ void upper3s_sys_whiff_contact(WORK* as, WORK* ds, s16 type);
 /*
  * SM5 - left right unblockables.
  *
- * Returns the scaling (in permille) of a hit that lands on a character
- * that is blocking while it is facing away from the attacker. 1000 means
- * "no change".
+ * Returns the scaling (in permille) of a hit: 500 for a hit that lands on a
+ * character that is blocking (block posture or blockstun) while it faces away
+ * from the attacker, and for every later hit of the combo that follows it
+ * (the defender stays in the damage state group); 1000, "no change",
+ * otherwise. Called for every strike (HITCHECK.c:set_damage_and_piyo()) and
+ * projectile hit (HITEFPL.c:effect_at_vs_player_dm()).
  */
 s16 upper3s_sys_crossup_permille(WORK* as, WORK* ds);
 

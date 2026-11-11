@@ -66,6 +66,12 @@ int main(void) {
 
     /* A character without a rule is left alone, even on a move that another
      * character has a rule for. */
+    mask = upper3s_cancel_mask(U3S_Q, U3S_KOC_ATTACK, 33, UNTOUCHED_MASK);
+    check((mask & U3S_CANCEL_SUPER) != 0, "Q's overhead rush, a special move, is reached through the hook");
+
+    mask = upper3s_cancel_mask(U3S_ALEX, U3S_KOC_ATTACK, U3S_ALEX_CROUCHING_STRONG, UNTOUCHED_MASK);
+    check(mask == UNTOUCHED_MASK, "another character's special moves are not touched");
+
     mask = upper3s_cancel_mask(U3S_RYU, U3S_KOC_NORMAL, U3S_ALEX_CROUCHING_STRONG, UNTOUCHED_MASK);
     check(mask == UNTOUCHED_MASK, "ryu is not given the rule of alex");
 

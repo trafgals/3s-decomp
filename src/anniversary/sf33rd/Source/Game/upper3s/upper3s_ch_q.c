@@ -27,3 +27,26 @@ u8 upper3s_ch_q_cancel_mask(s16 char_ix, u8 cg_cancel) {
         return cg_cancel;
     }
 }
+
+s16 upper3s_ch_q_taunt_konjyou(s16 konjyou) {
+    // Q12: the bonus after one more taunt (see upper3s_ch_q.h).
+    if (konjyou < U3S_Q_TAUNT_KONJYOU_1) {
+        return U3S_Q_TAUNT_KONJYOU_1;
+    }
+
+    if (konjyou < U3S_Q_TAUNT_KONJYOU_2) {
+        return U3S_Q_TAUNT_KONJYOU_2;
+    }
+
+    return U3S_Q_TAUNT_KONJYOU_3;
+}
+
+u8 upper3s_ch_q_special_cancel_mask(s16 char_ix, u8 cg_cancel) {
+    // Q3: the low ([4]6+K) and the overhead ([4]6+P held) rushes can be
+    // cancelled into a super art, like the mid rush in the retail game.
+    if ((char_ix >= U3S_Q_RUSH_LOW_FIRST) && (char_ix <= U3S_Q_RUSH_OVERHEAD_LAST)) {
+        return (u8)(cg_cancel | U3S_CANCEL_SUPER);
+    }
+
+    return cg_cancel;
+}

@@ -61,11 +61,25 @@ s16 upper3s_sm4_charge_partition_timer(s16 charge_frames, s16 charge_time, s16 t
     return timer;
 }
 
-void upper3s_sm4_charge_partition(WAZA_WORK* work, s16 work_count) {
+/*
+ * The partition timer of a charge has been reset in this charge already.
+ * The reset happens once, when the charge reaches one third: after it the
+ * timer counts down again while the direction is released, as in the retail
+ * game. (Resetting it on every frame, as PR #1 did, kept a charge alive for
+ * ever once a third of it was done; measured: Remy's charge survived a
+ * release of 116 frames, against 0 to 42 in the retail game.)
+ */
+static u8 sm4_reset_done[2][UPPER3S_SM4_WAZA_COUNT];
+
+void upper3s_sm4_charge_partition(s16 player, WAZA_WORK* work, s16 work_count) {
     s16 i;
 
-    if (work == NULL) {
+    if ((work == NULL) || (player < 0) || (player >= 2)) {
         return;
+    }
+
+    if (work_count > UPPER3S_SM4_WAZA_COUNT) {
+        work_count = UPPER3S_SM4_WAZA_COUNT;
     }
 
     for (i = 0; i < work_count; i++) {
@@ -78,6 +92,7 @@ void upper3s_sm4_charge_partition(WAZA_WORK* work, s16 work_count) {
         s16 charge_frames;
 
         if (w->w_type != UPPER3S_SM4_CHARGE_TYPE || w->w_ptr == NULL) {
+            sm4_reset_done[player][i] = 0;
             continue;
         }
 
@@ -109,6 +124,16 @@ void upper3s_sm4_charge_partition(WAZA_WORK* work, s16 work_count) {
             charge_frames = 0;
         }
 
-        w->w_int = upper3s_sm4_charge_partition_timer(charge_frames, charge_time, w->w_int, timer_max);
+        if (charge_frames < charge_time / 3) {
+            // A new charge (the step restarted and reloaded free1), or one
+            // that has not reached a third yet.
+            sm4_reset_done[player][i] = 0;
+            continue;
+        }
+
+        if (!sm4_reset_done[player][i]) {
+            w->w_int = upper3s_sm4_charge_partition_timer(charge_frames, charge_time, w->w_int, timer_max);
+            sm4_reset_done[player][i] = 1;
+        }
     }
 }

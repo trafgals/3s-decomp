@@ -118,5 +118,71 @@ class Cancels(unittest.TestCase):
                     self.assertTrue(cancels("twelve", "5+HK", follow, "upper3s", 120, 1, stocks, jump, defend))
 
 
+
+class TwelveSuperjump(unittest.TestCase):
+    # TW6 "Allow crouching Strong to be superjump-cancelled on hit/block, like standing Forward". A
+    # superjump (down, then up) entered on the frame after the normal makes contact; it is normal
+    # state 17 and goes 146 high.
+    @staticmethod
+    def superjumps(normal, build, defend="hit"):
+        alone = play("twelve", [f"1 {normal}"] + F.wait(60), {}, 0, 40, build)
+        h0 = F.first_hit(alone)
+        p2 = {i: "1" if normal.startswith("2+") else "4" for i in range(max(1, h0 - 6), h0 + 60)} if defend == "block" else {}
+        rows = play("twelve", [f"1 {normal}"] + F.wait(60), p2, 0, 40, build)
+        h = F.first_hit(rows)
+        end = F.free(rows, 0, h)
+        press = F.press_frame(rows, 0)
+        rows = play("twelve", [f"1 {normal}", f"{h - press} 5", "1 2", "8 8"] + F.wait(60), p2, 0, 40, build)
+        jump = F.first(rows, lambda r: r["p"][0]["rno"][1] == 0 and r["p"][0]["rno"][2] == 17, h)
+        return jump is not None and jump < end
+
+    def test_crouching_strong(self):
+        for defend in ("hit", "block"):
+            with self.subTest(defend=defend):
+                for build in ("vanilla", "upper3s"):
+                    self.assertTrue(self.superjumps("5+MK", build, defend), "s.MK, the retail control")
+                self.assertFalse(self.superjumps("2+MP", "vanilla", defend))
+                self.assertTrue(self.superjumps("2+MP", "upper3s", defend))
+
+
+
+class QRushes(unittest.TestCase):
+    # Q3 "Allow all overhead/low rushpunches ([4]6P/K/[P]) to be super-cancelled on hit/block/parry.
+    # Make the riskier versions at least AS useful as the safe version." Q charges back for 50
+    # frames, rushes with 6 + the button (held for the overhead version, `hold`), and enters a super
+    # art the frame after the rush makes contact. The mid rush ([4]6+P) is the safe version: it is
+    # super-cancellable in the retail game.
+    @staticmethod
+    def super_cancels(button, build, hold=False, defend="hit"):
+        lead = ["@stocks 1 3", "50 4"]
+        tail = [f"1 6+{button}"] + ([f"30 5+{button}"] if hold else []) + F.wait(90)
+        alone = play("q", lead + tail, {}, 0, 50, build)
+        h0 = contact(alone, "hit", 52)
+        assert h0 is not None, f"Q's {button} rush does not hit"
+        p2 = {i: "1" if button.endswith("K") else "4" for i in range(h0 - 6, h0 + 60)} if defend == "block" else {}
+        rows = play("q", lead + tail, p2, 0, 50, build)
+        h = contact(rows, defend, 52)
+        assert h is not None, f"Q's {button} rush: no {defend}"
+        end = F.free(rows, 0, h)
+        press = 52 + 3
+        held = f"{h - press} 5+{button}" if hold else f"{h - press} 5"
+        rows = play("q", lead + [f"1 6+{button}", held] + F.motion("23623", "LP") + F.wait(90), p2, 0, 50, build)
+        started = F.first(rows, lambda r: r["p"][0]["koc"] == 5 and r["p"][0]["cix"] >= 40, h)
+        return started is not None and started < end
+
+    def test_the_mid_rush_already_cancels(self):
+        for build in ("vanilla", "upper3s"):
+            with self.subTest(build=build):
+                self.assertTrue(self.super_cancels("MP", build))
+
+    def test_low_and_overhead_rushes(self):
+        for name, button, hold in (("low MK", "MK", False), ("low HK", "HK", False), ("overhead MP", "MP", True),
+                                   ("overhead HP", "HP", True)):
+            for defend in ("hit", "block"):
+                with self.subTest(name, defend=defend):
+                    self.assertFalse(self.super_cancels(button, "vanilla", hold, defend))
+                    self.assertTrue(self.super_cancels(button, "upper3s", hold, defend))
+
+
 if __name__ == "__main__":
     unittest.main()

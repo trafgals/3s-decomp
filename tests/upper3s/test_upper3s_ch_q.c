@@ -74,5 +74,26 @@ int main(void) {
 
     printf("q: %d checks, %d failures\n", checks, failures);
 
+    /* Q3: the low and the overhead rushes can be cancelled into a super art. */
+    check((upper3s_ch_q_special_cancel_mask(28, 0) & U3S_CANCEL_SUPER) != 0, "the low rush can be super-cancelled");
+    check((upper3s_ch_q_special_cancel_mask(34, 0) & U3S_CANCEL_SUPER) != 0, "the overhead rush can be super-cancelled");
+    check(upper3s_ch_q_special_cancel_mask(25, 0) == 0, "the mid rush keeps its retail mask");
+    check(upper3s_ch_q_special_cancel_mask(35, 0) == 0, "other specials keep their retail mask");
+
+    /* Q12: the taunt's defence bonus after 1, 2, 3 and 4 taunts. */
+    {
+        s16 konjyou = 0;
+        s16 expect[4] = { 4, 6, 9, 9 };
+        int i;
+        int same = 1;
+
+        for (i = 0; i < 4; i++) {
+            konjyou = upper3s_ch_q_taunt_konjyou(konjyou);
+            same &= konjyou == expect[i];
+        }
+
+        check(same, "the taunt bonus is 4, 6, 9 and stays at 9");
+    }
+
     return failures == 0 ? 0 : 1;
 }

@@ -205,6 +205,125 @@ class GuessParry(unittest.TestCase):
                 self.assertTrue(thrown("upper3s", tap))
 
 
+class ChargePartitioning(unittest.TestCase):
+    # SM4 "As soon as any charged direction (Back[4] or Down[2]) reaches 1/3 charge, the charge
+    # partition timer will be reset to maximum." Remy's Light of Virtue is a 42-frame back charge
+    # with a 42-frame partition timer (cmd_data.c:p14_cmd_29). The charge is held for `held`
+    # frames, released for `release` frames, then held again and finished with 6+LP. `phase` is
+    # the time Remy stands still first, which is where the retail timer happens to be.
+    @staticmethod
+    def comes_out(phase, held, release, build):
+        inputs = ["5"] * phase + ["4"] * held + ["5"] * release + ["4"] * (42 - held + 4) + ["6+LP"] + ["5"] * 40
+        rows = F.run([f"1 {a} 5" for a in inputs], p1="remy", p2="ken", pos=(300, 600), build=build)
+        return any(r["p"][0]["koc"] == 5 for r in rows[phase + held + release:])
+
+    def longest_release(self, phase, held, build):
+        return max([r for r in range(0, 60) if self.comes_out(phase, held, r, build)] or [-1])
+
+    def test_the_window_is_always_the_longest(self):
+        phases = (10, 30, 45)
+        retail = [self.longest_release(p, 20, "vanilla") for p in phases]
+        self.assertEqual(retail, [20, 0, 28])  # it depends on the phase
+        self.assertEqual([self.longest_release(p, 20, "upper3s") for p in phases], [42] * 3)
+
+    def test_not_before_a_third(self):
+        # 13 frames are short of a third of 42: the retail timer is kept.
+        for p in (10, 30):
+            with self.subTest(phase=p):
+                self.assertEqual(self.longest_release(p, 13, "upper3s"), self.longest_release(p, 13, "vanilla"))
+
+
+class LeftRightUnblockable(unittest.TestCase):
+    # SM5 "any time a character is hit during block animation while they are facing the opposite
+    # direction from the hit, the damage scaling is reduced to 50% for that hit and the followup
+    # combo." Ken (at x 625 when it lands) blocks Ryu's Hadoken holding back; during the blockstun
+    # Ryu is moved behind him and hits him with c.MK cancelled into a Hadoken.
+    KEN_X = 625
+    COMBO = ["1 2+MK {k}", "8 2 {k}", "1 3 {k}", "1 6+LP {k}", "80 5 {k}"]
+
+    @staticmethod
+    def hits(rows):
+        return [a["p"][1]["vit"] - b["p"][1]["vit"] for a, b in zip(rows, rows[1:]) if b["p"][1]["vit"] < a["p"][1]["vit"]]
+
+    def test_a_blocking_character_hit_from_behind(self):
+        behind = [f"@pos {self.KEN_X + 45} {self.KEN_X}"]
+        script = F.motion("236", "LP") + ["59 5 4"] + behind + [line.format(k="4") for line in self.COMBO]
+        v, u = both(script, p1="ryu", p2="ken", pos=(300, 500))
+        self.assertEqual(self.hits(v), [1, 13, 9])  # the blocked Hadoken's chip, then the combo
+        self.assertEqual(self.hits(u), [1, 6, 4])
+
+    def test_not_blocking(self):
+        # The same combo from behind on a Ken who is not blocking is a plain crossup.
+        script = [f"@pos {self.KEN_X + 45} {self.KEN_X}"] + [line.format(k="5") for line in self.COMBO]
+        v, u = both(script, p1="ryu", p2="ken", pos=(300, 500))
+        self.assertEqual(self.hits(v), [13, 9])
+        self.assertEqual(self.hits(u), self.hits(v))
+
+
+class ThrowInvincibility(unittest.TestCase):
+    # B1 "Make All Successful Throws Invincible for the Entire Animation - It can cause bad
+    # situations or bugs when characters are hit out of a successful throw animation". A player
+    # can be hit on a frame on which it has a hurtbox ("hb") and is not flagged invincible ("mu":
+    # zettai_muteki_flag keeps it out of the hit queue, PLCNT.c). The victim has no hurtbox while
+    # it is caught; the thrower has them on much of its throw (its recovery after the release).
+    def test_every_throw(self):
+        for char in F.CHARS:
+            for throw in ("6+LP+LK", "4+LP+LK"):
+                with self.subTest(char=char, throw=throw):
+                    v, u = both(["1 " + throw] + F.wait(130), p1=char, p2="ken", pos=(400, 440))
+
+                    def hittable(rows, i, group):
+                        part = [r for r in rows if r["p"][i]["rno"][1] == group][1:]  # after the frame it connects
+                        self.assertTrue(part or group == 3, "the throw connects")
+                        return sum(1 for r in part if r["p"][i]["hb"] > 0 and r["p"][i]["mu"] == 0)
+
+                    self.assertEqual(hittable(u, 0, 2), 0, "the thrower can be hit in 3s'")
+                    self.assertEqual(hittable(u, 1, 3), 0, "the victim can be hit in 3s'")
+                    self.assertEqual(hittable(v, 1, 3), 0)
+                    self.assertEqual(lost(u), lost(v), "the throw's damage")
+                    end = max(r["f"] for r in u if r["p"][0]["rno"][1] == 2)
+                    if end < len(u):
+                        self.assertEqual(F.player(u, end + 1, 0)["mu"], 0, "the thrower can be hit after the throw")
+
+    def test_the_retail_thrower_can_be_hit(self):
+        # The cases the spec is about: Ryu's, Q's and Twelve's throws leave the thrower open.
+        for char in ("ryu", "q", "twelve"):
+            with self.subTest(char=char):
+                rows = F.run(["1 6+LP+LK"] + F.wait(130), p1=char, p2="ken", pos=(400, 440), build="vanilla")
+                part = [r for r in rows if r["p"][0]["rno"][1] == 2][1:]
+                self.assertGreater(sum(1 for r in part if r["p"][0]["hb"] > 0 and r["p"][0]["mu"] == 0), 20)
+
+
+class AirThrowTech(unittest.TestCase):
+    # B4 "Fix Bug Where Some Characters Can Attack Immediately After Teching Air Throws - Makoto,
+    # etc." Both jump; Chun-Li air-throws the other character, who techs it (LP+LK) and then
+    # presses an attack every other frame. The tech is normal state 49 (PLPCA.c:check_nagenuke()).
+    @staticmethod
+    def first_attack(victim, build, attack="5+HK"):
+        p1 = ["8"] * 4 + ["5"] * 6 + ["6+LP+LK"] + ["5"] * 100
+        p2 = ["8"] * 4 + ["5"] * (len(p1) - 4)
+        p2[16] = "5+LP+LK"
+        for i in range(18, 100, 2):
+            p2[i] = attack
+        rows = F.run([f"1 {a} {b}" for a, b in zip(p1, p2)], p1="chunli", p2=victim, pos=(400, 440), build=build)
+        tech = F.first(rows, lambda r: r["p"][1]["rno"][1] == 0 and r["p"][1]["rno"][2] == 49)
+        assert tech is not None, f"{victim} does not tech the air throw"
+        attack_row = F.player(rows, F.first(rows, lambda r: r["p"][1]["rno"][1] == 4, tech), 1)
+        return attack_row["y"]
+
+    def test_makoto_cannot_attack_in_the_air(self):
+        for attack in ("5+HK", "5+LP"):
+            with self.subTest(attack=attack):
+                self.assertGreater(self.first_attack("makoto", "vanilla", attack), 0)  # in the air
+                self.assertEqual(self.first_attack("makoto", "upper3s", attack), 0)  # after landing
+
+    def test_the_others_are_unchanged(self):
+        for victim in ("ryu", "ken", "chunli", "ibuki", "q", "twelve"):
+            with self.subTest(victim=victim):
+                self.assertEqual(self.first_attack(victim, "vanilla"), 0)
+                self.assertEqual(self.first_attack(victim, "upper3s"), 0)
+
+
 class OverheadAndTaunt(unittest.TestCase):
     def test_while_holding_a_direction(self):
         # B3 "Universal overheads (MP+MK) and taunts (HP+HK) work while holding away or towards".

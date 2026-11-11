@@ -138,6 +138,23 @@ static void test_throw_invulnerability(void) {
     upper3s_throw_frame(&victim);
 
     check(victim.zettai_muteki_flag == 0, "the victim of a throw can be hit again after the throw");
+
+    /* The thrower: invincible in its catch state, recovery included. */
+    {
+        PLW thrower;
+
+        setup_player(&thrower, 1);
+        thrower.wu.routine_no[1] = 2;
+        upper3s_throw_invuln_start_thrower(&thrower);
+        check(thrower.zettai_muteki_flag == 1, "the thrower of a successful throw cannot be hit");
+
+        upper3s_throw_frame(&thrower);
+        check(thrower.zettai_muteki_flag == 1, "the thrower is invincible while it is throwing");
+
+        thrower.wu.routine_no[1] = 0;
+        upper3s_throw_frame(&thrower);
+        check(thrower.zettai_muteki_flag == 0, "the thrower can be hit again after the throw");
+    }
 }
 
 /*

@@ -34,7 +34,7 @@ routine, so it is not the KKZ.
 |:---|:---|:---|
 | "Stun bar increased to 'regular' size instead of 'short' size" | `PLCNT.c:pl_piyo_tbl[14]` is 56, the short size; the regular size is the one of the majority of the cast (64) | done - `upper3s/upper3s_sys.c:upper3s_sys_stun_genkai()` |
 | "Messatsu Gou Rasen (SAII) bar length is now shorter than SAI or SAIII" | the three supers of the retail table share the same bar length of 112 | done - `upper3s/pl13.c`: the bar of the SA II is 0x60 (96), the other two keep 112 |
-| "KKZ (hidden super) motion changed from D,D,D+PPP to D,D+PP" | the motion of a command is the chain of lever records of the command set in `cmd_data.c` (`pE_cmd_38`); the command tables are a shared file | needs-disc - the hook is the record chain of `cmd_data.c:pE_cmd_38` |
+| "KKZ (hidden super) motion changed from D,D,D+PPP to D,D+PP" | the motion of a command is the chain of lever records of the command set in `cmd_data.c` (`pE_cmd_38`); the command tables are a shared file | verified - `cmd_data.c:pE_cmd_25` under `UPPER_3S`: down, neutral, down, then the punches. In this version the command already takes any two punches (button index 19, the one of the EX specials), so only the third down is removed (`tests/match/test_damage.py`) |
 | "KKZ (hidden super) damage reduced from 107 to 95" | the base damage of a hit is the index of `POW_DATA.c:Power_Data`, so it can only be scaled at runtime (`Pow_Pow.c:upper3s_power`); the document gives the retail value and the wanted value, so the change is the ratio between them: 95 / 107 = 888 permille | done - `upper3s/pl13.c`: the four entries of the KKZ are scaled to 888 permille |
 | "Towards+Strong is still invincible to throws" | nothing to change | drop - the document asks to keep it |
 

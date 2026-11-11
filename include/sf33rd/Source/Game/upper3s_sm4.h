@@ -41,6 +41,6 @@ s16 upper3s_sm4_charge_partition_timer(s16 charge_frames, s16 charge_time, s16 t
  * Applies the rule to the command work of one player.  `work` is the row
  * of waza_work[] that belongs to the player.
  */
-void upper3s_sm4_charge_partition(WAZA_WORK* work, s16 work_count);
+void upper3s_sm4_charge_partition(s16 player, WAZA_WORK* work, s16 work_count);
 
 #endif

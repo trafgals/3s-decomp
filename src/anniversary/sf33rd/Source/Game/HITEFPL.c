@@ -6,6 +6,10 @@
 #include "sf33rd/Source/Game/Pow_Pow.h"
 #include "sf33rd/Source/Game/SysDir.h"
 
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s_sys.h"
+#endif
+
 void setup_dm_rl_pldm(WORK* as, WORK* ds);
 
 void effect_at_vs_player_dm(s16 ix2, s16 ix) {
@@ -26,6 +30,17 @@ void effect_at_vs_player_dm(s16 ix2, s16 ix) {
     setup_dm_rl_pldm(&as->wu, &ds->wu);
     cal_hit_mark_pos(&as->wu, &ds->wu, ix2, ix);
     cal_damage_vitality_eff(as, ds);
+#if defined(UPPER_3S)
+    {
+        // Third Strike Upper: a hit on a blocking character from the side it
+        // is not facing, and the combo that follows, are scaled to 50% (SM5).
+        s16 permille = upper3s_sys_crossup_permille(&as->wu, &ds->wu);
+
+        if (permille != 1000) {
+            ds->wu.dm_vital = (ds->wu.dm_vital * permille) / 1000;
+        }
+    }
+#endif
     ds->wu.dm_piyo = _add_piyo_gauge[as->master_player][as->wu.att.piyo];
     ds->wu.dm_piyo = ds->wu.dm_piyo * stun_gauge_omake[omop_stun_gauge_add[(ds->wu.id + 1) & 1]] / 32;
 

@@ -84,8 +84,8 @@ void hit_check_main_process() {
     clear_hit_queue();
 
 #if defined(UPPER_3S)
-    // Third Strike Upper: the throw animation of a thrown character is over
-    // when it leaves the caught state, and then it can be hit again.
+    // Third Strike Upper: the throw is over for a character when it leaves
+    // the caught or the catch state, and then it can be hit again.
     upper3s_throw_frame(&plw[0]);
     upper3s_throw_frame(&plw[1]);
 #endif
@@ -354,9 +354,10 @@ void set_caught_status(s16 ix) {
     ds->wu.routine_no[3] = 0;
 #if defined(UPPER_3S)
     // Third Strike Upper: a successful throw is invincible for its whole
-    // animation, so that the victim cannot be hit out of it (the Remy/Urien
-    // glitch and the Q throw bug).
+    // animation, so that neither character can be hit out of it (the
+    // Remy/Urien glitch and the Q throw bug) (B1).
     upper3s_throw_invuln_start(ds);
+    upper3s_throw_invuln_start_thrower(as);
 
     // Third Strike Upper: a throw that lands in the window or in the
     // cooldown of a guess parry cannot be teched.

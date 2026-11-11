@@ -27,7 +27,7 @@ dragon punch of the document, 623+LP.
 | "Shippu Jinrai Kyaku (SAIII) now has a maximum of 2 stocks instead of 3; damage reduced by 15%" | the retail SA III costs three stocks (`PLCNT.c:super_arts_data[11][2].store_max`); the base damage of a hit is the index of `POW_DATA.c:Power_Data`, so it can only be scaled at runtime (`Pow_Pow.c:upper3s_power`) | done - `upper3s/pl10.c`: the stock count is 2 and the three versions of the super are scaled to 850 permille |
 | "Jab DP (623LP) damage reduced from 15 to 11.5" | the same pipeline; the document gives the retail value and the wanted value, so the change is the ratio between them: 11.5 / 15 = 767 permille | done - `upper3s/pl10.c`: `{ U3S_KOC_ATTACK, 28, U3S_MV_DAMAGE_PERMILLE, 0, 767, 0, 0, 0, 0 }` |
 | "Grounded opponent knockback on 2nd hit of Target Combo Strong->Fierce decreased slightly" | the knockback is the movement data of the frame chain of the disc | needs-disc |
-| "Fix the crash when killing Makoto with a neutral throw" | the throw is the shared code (`Com_Sub.c`, `HITPLPL.c`); the crash is a fault of the shared throw handling, not of a file of Ken | needs-disc - a hook in the shared throw code would be needed |
+| "Fix the crash when killing Makoto with a neutral throw" | the throw is the shared code (`Com_Sub.c`, `HITPLPL.c`); the crash is a fault of the shared throw handling, not of a file of Ken | n/a - not present in this version: each of Ken's throws knocks out a Makoto with 5 health and the fight goes on (`tests/match/test_damage.py`) |
 
 ### The unit of the damage of the document
 

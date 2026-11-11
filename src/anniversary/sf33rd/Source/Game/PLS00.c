@@ -1842,9 +1842,14 @@ s32 check_cg_cancel_data(PLW* wk) {
     // the round, and this function runs on neutral frames too (nm_01000() at the start
     // of the round), so without a move there is nothing to look up. Found by the
     // headless fight harness: the first frame of every fight crashed here.
+    //
+    // A special move can change its animation while it runs (Q's rush turns into its overhead version when
+    // the punch is held: assignment 25, animation 33), so for special moves (koc 5) the animation that is
+    // playing, wk->wu.char_index, is passed instead of the assignment's.
     if (wk->as != NULL) {
-        wk->wu.cg_cancel =
-            upper3s_cancel_mask(wk->player_number, wk->wu.now_koc, wk->as->char_ix, wk->wu.cg_cancel);
+        wk->wu.cg_cancel = upper3s_cancel_mask(wk->player_number, wk->wu.now_koc,
+                                               (wk->wu.now_koc == 5) ? wk->wu.char_index : wk->as->char_ix,
+                                               wk->wu.cg_cancel);
     }
 #endif
     if (wk->wu.cg_cancel == 0) {

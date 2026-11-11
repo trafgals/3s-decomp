@@ -25,14 +25,16 @@
  *
  * The move is addressed by two things:
  *
- *   - `koc`, the kind of character data the move lives in.  The rules of the
+ *   - `koc`, the kind of character data the move lives in.  Most rules of the
  *     design document are about the normal attacks, which are the slot 4; the
  *     special moves and the super arts are the slot 5 and they have their own
- *     numbering, which overlaps the one of the normals.
+ *     numbering, which overlaps the one of the normals (Q3 is about slot 5).
  *
  *   - `char_ix`, the index of the move in that kind of data.  For a normal it
  *     is the char_ix of the assignment table of the disc
  *     (bin2obj/asstbl.c), which is the only thing that identifies the move.
+ *     For a special move it is the animation that is playing
+ *     (`WORK.char_index`): a special can change animation while it runs.
  *
  * The hook gives the cancel for the whole move, while the retail gives it for
  * the frames of the chain that carry the byte. The cancels of the design
@@ -42,7 +44,16 @@
  * move has connected.
  */
 u8 upper3s_cancel_mask(s16 char_id, s16 koc, s16 char_ix, u8 cg_cancel) {
-    /* The rules of the design document are about the normal attacks only. */
+    /* The special moves: Q's rushes (Q3). */
+    if (koc == U3S_KOC_ATTACK) {
+        if (char_id == U3S_Q) {
+            return upper3s_ch_q_special_cancel_mask(char_ix, cg_cancel);
+        }
+
+        return cg_cancel;
+    }
+
+    /* The other rules of the design document are about the normal attacks. */
     if (koc != U3S_KOC_NORMAL) {
         return cg_cancel;
     }

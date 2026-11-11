@@ -16,16 +16,32 @@
  *
  * The retail game has a flag for a character that cannot be hit at all:
  * `PLW.zettai_muteki_flag`. The player process only puts a character into
- * the hit queue when the flag is clear (PLCNT.c:378), and only the works
+ * the hit queue when the flag is clear (PLCNT.c:400), and only the works
  * in the hit queue are checked against the attacks of the other works
  * (HITCHECK.c:attack_hit_check). A character with the flag set therefore
  * cannot be hit by anything - not by a normal move, not by a projectile and
- * not by a throw.
+ * not by a throw. The damage of the throw itself does not go through the hit
+ * queue (PLPCA.c calls setup_catch_atthit() directly), so it still lands.
  *
- * The flag is set when the throw connects and cleared again when the victim
- * leaves the caught state, which is the end of the throw animation.
+ * Both characters get the flag when the throw connects. Measured on the
+ * forward and back throws of all 20 characters: in the retail game the
+ * victim has hurtboxes only on the first frame of being caught, but the
+ * thrower has them on a large part of its throw (Ryu's forward throw: the
+ * first frame, and the 26 frames of recovery after the victim is released);
+ * that is where a character can be "hit out of a successful throw". PR #1
+ * protected the victim only.
+ *
+ * The flag is cleared when the character leaves the throw: the thrower its
+ * catch state (routine_no[1] 2), the victim its caught state (3).
  */
 static u8 upper3s_throw_invuln[U3S_THROW_PLAYERS];
+
+/*
+ * The routine group the player was in when its throw invincibility started:
+ * 2 for the thrower (PLPCA.c:Player_catch()), 3 for the victim
+ * (PLPCU.c:Player_caught()). The invincibility ends when it leaves it.
+ */
+static s16 upper3s_throw_group[U3S_THROW_PLAYERS];
 
 /*
  * SM2/SM3 - the parries of a player, per kind (U3S_PARRY_*).
@@ -64,6 +80,21 @@ void upper3s_throw_invuln_start(PLW* victim) {
     /* The retail flag of a character that cannot be hit. */
     victim->zettai_muteki_flag = 1;
     upper3s_throw_invuln[victim->wu.id] = 1;
+    upper3s_throw_group[victim->wu.id] = 3;
+}
+
+/*
+ * B1 - `thrower`'s throw connected: it is invincible until it leaves the
+ * catch state, recovery included.
+ */
+void upper3s_throw_invuln_start_thrower(PLW* thrower) {
+    if ((thrower->wu.id < 0) || (thrower->wu.id >= U3S_THROW_PLAYERS)) {
+        return;
+    }
+
+    thrower->zettai_muteki_flag = 1;
+    upper3s_throw_invuln[thrower->wu.id] = 1;
+    upper3s_throw_group[thrower->wu.id] = 2;
 }
 
 /*
@@ -85,10 +116,10 @@ void upper3s_throw_invuln_end(PLW* victim) {
 /*
  * B1 - the end of the frame of a player.
  *
- * The caught state of the victim of a throw is `routine_no[1] == 3`
- * (PLPCU.c:Player_caught). The throw animation is over when the victim
- * leaves it, either because the thrower has finished or because the throw
- * has been teched.
+ * The throw is over for the victim when it leaves the caught state
+ * (`routine_no[1] == 3`, PLPCU.c:Player_caught), because the thrower has
+ * finished or the throw has been teched, and for the thrower when it leaves
+ * the catch state (`routine_no[1] == 2`, PLPCA.c:Player_catch).
  */
 void upper3s_throw_frame(PLW* wk) {
     if ((wk->wu.id < 0) || (wk->wu.id >= U3S_THROW_PLAYERS)) {
@@ -99,7 +130,7 @@ void upper3s_throw_frame(PLW* wk) {
         return;
     }
 
-    if (wk->wu.routine_no[1] != 3) {
+    if (wk->wu.routine_no[1] != upper3s_throw_group[wk->wu.id]) {
         upper3s_throw_invuln_end(wk);
     }
 }
