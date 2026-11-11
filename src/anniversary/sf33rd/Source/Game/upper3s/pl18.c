@@ -81,19 +81,18 @@ const Upper3sSuperArt upper3s_super_art_remy[4] = {
 
 const Upper3sMove upper3s_moves_remy[] = {
     { U3S_KOC_NORMAL, 21, U3S_MV_DAMAGE_PERMILLE, 0, 1110, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* 2MP - crouching Strong */
-    { U3S_KOC_NORMAL, 14, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -24, 0, 0, 0, 0, 0 }, /* 4MK - far Forward */
-    { U3S_KOC_NORMAL, 17, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -28, 0, 0, 0, 0, 0 }, /* 4HK - far Roundhouse */
-    { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -33, 0, 0, 0, 0, 0 }, /* 2MK - crouching Forward */
-    { U3S_KOC_NORMAL, 13, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -30, 0, 0, 0, 0, 0 }, /* 6MK - Towards+Forward */
+    /* RM10, the Cold Blue Kick (63214K): "Increase hit advantage of Short/Forward Cold Blue
+     * Kicks so they are not negative on hit from up close; make Forward version +2". Both are
+     * -4 on hit up close in the retail game, with a hold of 12 (koc 5, the specials: cix 46 and 47,
+     * measured in the real engine by tests/match/test_hitstun.py). */
+    { U3S_KOC_ATTACK, 46, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -16, 0, 0, 0, 0, 0 }, /* LK Cold Blue Kick: -4 -> 0 */
+    { U3S_KOC_ATTACK, 47, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -18, 0, 0, 0, 0, 0 }, /* MK Cold Blue Kick: -4 -> +2 */
+    /* Hitstun so the move is not negative on hit: the hold of the defender (hs_you) that makes
+     * it 0 on hit, measured in the real engine (tests/match/test_hitstun.py). */
+    { U3S_KOC_NORMAL, 13, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -11, 0, 0, 0, 0, 0 }, /* far s.MK (vanilla -2) */
+    { U3S_KOC_NORMAL, 16, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -18, 0, 0, 0, 0, 0 }, /* far s.HK (vanilla -7) */
+    { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -17, 0, 0, 0, 0, 0 }, /* c.MK (vanilla -8) */
+    { U3S_KOC_NORMAL, 14, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -15, 0, 0, 0, 0, 0 }, /* 6MK (vanilla -6) */
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }                              /* terminator */
 };
 
-/*
- * TODO(3s'): "Increase hit advantage of Short/Forward Cold Blue Kicks
- * (63214K) so they are not negative on hit from up close; make Forward
- * version +2" is not in the table yet: the Cold Blue Kick is a special move
- * (U3S_KOC_ATTACK) and its index inside char_table[4] is only visible in
- * the character's command table (pass19.c uses the tech numbers 0x1C-0x1F
- * for Remy's four specials, but the sources do not say which one is the
- * Cold Blue Kick).
- */

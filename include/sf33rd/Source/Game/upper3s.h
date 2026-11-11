@@ -125,6 +125,16 @@ enum {
 #define U3S_KOC_SUPER U3S_KOC_ATTACK
 
 /*
+ * Not a slot: a move override with this koc names an entry of the attack table
+ * (att_ix_table) directly, in `index`. For moves whose attack entries the chain walk
+ * cannot reach, such as a hit that is played only on a branch the straight walk jumps
+ * over (Twelve's crouching Fierce: its third hit is entry 50). Only the attack data
+ * fields (U3S_MV_IMPACT, U3S_MV_HS_ME, U3S_MV_HS_YOU) apply. The entry a hit loads is
+ * in the headless harness's log ("ren").
+ */
+#define U3S_KOC_ENTRY 100
+
+/*
  * Super art overrides.
  *
  * The values replace the retail base numbers found in

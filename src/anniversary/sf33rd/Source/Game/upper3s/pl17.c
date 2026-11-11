@@ -69,12 +69,21 @@ const Upper3sSuperArt upper3s_super_art_twelve[4] = {
  */
 
 const Upper3sMove upper3s_moves_twelve[] = {
-    { U3S_KOC_NORMAL, 3, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 },  /* 5MP - standing Strong */
-    { U3S_KOC_NORMAL, 24, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -13, 0, 0, 0, 0, 0 }, /* 2HP - crouching Fierce */
-    { U3S_KOC_NORMAL, 12, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -11, 0, 0, 0, 0, 0 }, /* 5MK - standing Forward */
-    { U3S_KOC_NORMAL, 15, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -16, 0, 0, 0, 0, 0 }, /* 5HK - standing Roundhouse */
-    { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 }, /* 2MK - crouching Forward */
-    { U3S_KOC_NORMAL, 14, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -15, 0, 0, 0, 0, 0 }, /* 4MK - Back+Forward */
+    /* Hitstun so the move is not negative on hit: the hold of the defender (hs_you) that makes
+     * it 0 on hit, measured in the real engine (tests/match/test_hitstun.py). */
+    { U3S_KOC_NORMAL, 3, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 }, /* s.MP (vanilla -1) */
+    { U3S_KOC_NORMAL, 4, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 }, /* far s.MP (vanilla -1) */
+    { U3S_KOC_NORMAL, 6, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -12, 0, 0, 0, 0, 0 }, /* s.HP, close and far share the entry (vanilla -1) */
+    /* c.HP (cix 24) hits three times; the second and third hit (entries 49 and 50) are on the
+     * branch it takes after the first hit connects, which the chain walk does not follow, so they
+     * are named directly. The last hit decides the advantage (vanilla -1). */
+    { U3S_KOC_ENTRY, 49, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -5, 0, 0, 0, 0, 0 }, /* c.HP, second hit */
+    { U3S_KOC_ENTRY, 50, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -5, 0, 0, 0, 0, 0 }, /* c.HP, third hit */
+    { U3S_KOC_NORMAL, 9, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -8, 0, 0, 0, 0, 0 }, /* s.LK (vanilla -1) */
+    { U3S_KOC_NORMAL, 12, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 }, /* s.MK (vanilla -1) */
+    { U3S_KOC_NORMAL, 15, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -12, 0, 0, 0, 0, 0 }, /* s.HK (vanilla -1) */
+    { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 }, /* c.MK (vanilla -1) */
+    { U3S_KOC_NORMAL, 14, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 }, /* 4MK (vanilla -1) */
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }                              /* terminator */
 };
 

@@ -33,6 +33,9 @@
 #include "sf33rd/Source/Game/debug/Debug.h"
 #include "sf33rd/Source/Game/workuser.h"
 #include "structs.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s_chain.h"
+#endif
 
 #include <ctype.h>
 #include <stdio.h>
@@ -320,6 +323,47 @@ void harness_begin_frame(unsigned long frame) {
 
         if (G_No[1] == 5 && Allow_a_battle_f && My_char[0] == cfg_char[0] && My_char[1] == cfg_char[1]) {
             fight_started = 1;
+#if defined(UPPER_3S)
+            // SF33_LIST_ATTACKS=koc: print the attack entries of every move of player 1's
+            // slot koc (4 normals, 5 specials and supers), as the override layer sees them.
+            if (getenv("SF33_LIST_ATTACKS") != NULL) {
+                s16 koc = (s16)atoi(getenv("SF33_LIST_ATTACKS"));
+
+                for (s16 ix = 0; ix < 128; ix++) {
+                    Upper3sChain chain;
+                    s16 entries[U3S_CHAIN_MAX_ATTACKS];
+                    Upper3sChainInfo info;
+
+                    if (!upper3s_chain_open(&plw[0].wu, koc, ix, &chain)) {
+                        continue;
+                    }
+
+                    if (getenv("SF33_LIST_BLOCKS") != NULL && atoi(getenv("SF33_LIST_BLOCKS")) == ix) {
+                        // The raw blocks of the chain: w0 (type | hold << 8, or a command code when below 0x100),
+                        // w1, and the attack index (high half of w2, shifted right by 6).
+                        for (s32 b = 0; b < 24 && chain.base + b * chain.cgd + 2 < chain.count; b++) {
+                            u32* w = chain.words + chain.base + b * chain.cgd;
+                            printf("  block %2d w0 %08x w1 %08x w2 %08x att %d\n", b, w[0], w[1], w[2], (s16)(w[2] >> 16) >> 6);
+                        }
+                    }
+
+                    s32 n = upper3s_chain_attacks(&chain, entries, U3S_CHAIN_MAX_ATTACKS);
+                    upper3s_chain_info(&chain, &info);
+                    printf("attacks koc %d cix %d base %d startup %d recovery %d entries", koc, ix, chain.base,
+                           info.startup, info.recovery);
+                    for (s32 k = 0; k < n; k++) {
+                        printf(" %d(hs_you %d)", entries[k], plw[0].wu.att_ix_table[entries[k]].hs_you);
+                    }
+                    n = upper3s_chain_block_attacks(&chain, entries, U3S_CHAIN_MAX_ATTACKS);
+                    printf(" | all blocks");
+                    for (s32 k = 0; k < n; k++) {
+                        printf(" %d", entries[k]);
+                    }
+                    printf("\n");
+                }
+                fflush(stdout);
+            }
+#endif
         } else {
             return;
         }
@@ -349,7 +393,7 @@ static void log_player(const PLW* p) {
             "\"aix\":%d,\"can\":%d,\"pat\":%d,\"waza\":%d,\"hst\":%d,\"dst\":%d,\"vit\":%d,\"dmv\":%d,\"anum\":%d,"
             "\"pow\":%d,\"piyo\":%d,\"hsme\":%d,\"hsyou\":%d,\"guard\":%d,\"stun\":%d,\"stunmax\":%d,"
             "\"stunned\":%d,\"gauge\":%d,\"stock\":%d,\"stockmax\":%d,\"glen\":%d,\"in\":%d,\"char\":%d,"
-            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d}",
+            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d}",
             w->xyz[0].disp.pos, w->xyz[1].disp.pos, w->rl_flag, w->routine_no[0], w->routine_no[1],
             w->routine_no[2], w->routine_no[3], w->now_koc, w->char_index, w->cg_type, w->cg_hit_ix, w->cg_att_ix,
             w->cg_cancel, w->pat_status, w->kind_of_waza, w->hit_stop, w->dm_stop, w->vital_new, w->dm_vital,
@@ -358,7 +402,7 @@ static void log_player(const PLW* p) {
             p->sa ? p->sa->gauge.s.h : -1, p->sa ? p->sa->store : -1, p->sa ? p->sa->store_max : -1,
             p->sa ? p->sa->gauge_len : -1, current_input[p == &plw[0] ? 0 : 1], p->player_number,
             p->sa ? p->sa->kind_of_arts : -1, w->original_vitality, p->sa ? p->sa->total_gauge : -1,
-            p->sa ? p->sa->gauge.i : -1);
+            p->sa ? p->sa->gauge.i : -1, w->renew_attack < 0 ? -w->renew_attack : w->renew_attack);
 }
 
 void harness_end_frame(unsigned long frame) {

@@ -187,6 +187,24 @@ int upper3s_chain_open(WORK* wk, s16 koc, s16 index, Upper3sChain* chain) {
 #define U3S_CMD_IXBW 50 /* comm_ixbw - jump backward */
 
 /*
+ * The commands after which the frames of the chain are no longer the frames of the
+ * move (the index into CHARSET.c:decode_chcmd): comm_end loops the animation back to
+ * an earlier frame, and the others leave for another chain unconditionally (comm_jmp
+ * and comm_jpss to a given one, comm_ret to the caller of comm_jsr, comm_back and
+ * comm_retmj to a saved one). The walk stops there. Without that it read on into the
+ * blocks of the next move of the slot: every move of Remy's normals then listed the
+ * attack entries of the moves after it, and an override of one move changed them all
+ * (found by the headless fight harness). The conditional jumps (comm_djmp on the
+ * lever, comm_rljmp on the facing, ...) branch, and the walk goes on through them.
+ */
+#define U3S_CMD_END 2
+#define U3S_CMD_JMP 3
+#define U3S_CMD_JPSS 4
+#define U3S_CMD_RET 6
+#define U3S_CMD_BACK 69
+#define U3S_CMD_RETMJ 102
+
+/*
  * The frames of the chain.
  *
  * A block whose first word is below 0x100 has a hold of zero: it is a
@@ -236,6 +254,13 @@ static s32 upper3s_chain_frames(const Upper3sChain* chain, Upper3sFrame* frames,
             /* a command block: it is not a frame */
             s32 code = (s32)(w0 & 0xFF);
             s32 pat = (s16)(chain->words[word + 1] >> 16);
+
+            if (code == U3S_CMD_END || code == U3S_CMD_JMP || code == U3S_CMD_JPSS || code == U3S_CMD_RET ||
+                code == U3S_CMD_BACK || code == U3S_CMD_RETMJ) {
+                /* the frames of the move end here (see above) */
+                *stopped = 0;
+                return found;
+            }
 
             if (code == U3S_CMD_IXFW) {
                 n += pat - 1;
@@ -300,8 +325,96 @@ static s32 upper3s_chain_frames(const Upper3sChain* chain, Upper3sFrame* frames,
  * Reads the startup and the recovery of the chain out of its data.
  */
 /*
- * The attack data entries the move uses: the distinct non-zero attack indexes of its
- * frames, in the order of the frames (see the header).
+ * The attack entries of every block of the move (see the header): from the start of its
+ * chain up to a command that ends the move (U3S_CMD_END ... above), an end-of-animation
+ * marker, or the start of the next chain of the slot. A diagnostic: it can name entries
+ * of other moves too (Sean's 6HP lists 7, the entry of his close Fierce), so the
+ * override layer uses the straight walk of upper3s_chain_attacks().
+ */
+static s32 upper3s_chain_next_base(const Upper3sChain* chain) {
+    s32 first = chain->count;
+    s32 next = chain->count;
+    s32 i;
+
+    /* The slot starts with the table of the byte offsets of its chains; the table
+     * ends where the first chain begins. */
+    for (i = 0; i < first && i < chain->count; i++) {
+        u32 off = chain->words[i];
+        s32 base;
+
+        if ((off == 0) || (off & 3)) {
+            continue;
+        }
+
+        base = (s32)(off / 4);
+
+        if (base >= chain->count) {
+            continue;
+        }
+
+        if (base < first) {
+            first = base;
+        }
+
+        if ((base > chain->base) && (base < next)) {
+            next = base;
+        }
+    }
+
+    return next;
+}
+
+s32 upper3s_chain_block_attacks(const Upper3sChain* chain, s16* out, s32 max) {
+    s32 next = upper3s_chain_next_base(chain);
+    s32 word;
+    s32 j;
+    s32 count = 0;
+
+    for (word = chain->base; word + 2 < next; word += chain->cgd) {
+        u32 w0 = chain->words[word];
+        s32 att;
+
+        if ((w0 & 0xFFFF) < 0x100) {
+            s32 code = (s32)(w0 & 0xFF);
+
+            if (code == U3S_CMD_END || code == U3S_CMD_JMP || code == U3S_CMD_JPSS || code == U3S_CMD_RET ||
+                code == U3S_CMD_BACK || code == U3S_CMD_RETMJ) {
+                break;
+            }
+
+            continue; /* any other command: the blocks after it are still the move's */
+        }
+
+        if (((w0 & 0xFF) == U3S_CHAIN_END_CODE) || ((s32)((w0 >> 8) & 0xFF) >= U3S_CHAIN_WAIT_HOLD)) {
+            break;
+        }
+
+        att = (s16)(chain->words[word + 2] >> 16) >> 6;
+
+        if (att < 0) {
+            att = -att;
+        }
+
+        if (att == 0) {
+            continue;
+        }
+
+        for (j = 0; j < count && out[j] != att; j++) {
+        }
+
+        if (j == count && count < max) {
+            out[count++] = (s16)att;
+        }
+    }
+
+    return count;
+}
+
+/*
+ * The attack entries on the straight path of the move (see the header). A move can
+ * branch: Twelve's crouching Fierce tests whether its first hit connected (comm_hjmp)
+ * and plays its second and third hits (entries 49 and 50) only on a branch the straight
+ * walk jumps over (comm_ixfw). Such entries are named directly with U3S_KOC_ENTRY.
  */
 s32 upper3s_chain_attacks(const Upper3sChain* chain, s16* out, s32 max) {
     Upper3sFrame frames[U3S_CHAIN_MAX_FRAMES];

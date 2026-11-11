@@ -68,10 +68,15 @@ const Upper3sSuperArt upper3s_super_art_sean[4] = {
  */
 
 const Upper3sMove upper3s_moves_sean[] = {
-    { U3S_KOC_NORMAL, 7, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -24, 0, 0, 0, 0, 0 },  /* 6HP - close / Towards+Fierce */
-    { U3S_KOC_NORMAL, 8, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -26, 0, 0, 0, 0, 0 },  /* 4HP - far Fierce */
-    { U3S_KOC_NORMAL, 24, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 }, /* 2HP - crouching Fierce */
-    { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -12, 0, 0, 0, 0, 0 }, /* 2MK - crouching Forward */
+    /* Hitstun so the move is not negative on hit: the hold of the defender (hs_you) that makes
+     * it 0 on hit, measured in the real engine (tests/match/test_hitstun.py). */
+    { U3S_KOC_NORMAL, 6, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -13, 0, 0, 0, 0, 0 }, /* close s.HP (vanilla -2) */
+    { U3S_KOC_NORMAL, 7, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -6, 0, 0, 0, 0, 0 }, /* far s.HP (vanilla -5) */
+    { U3S_KOC_NORMAL, 24, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -15, 0, 0, 0, 0, 0 }, /* c.HP (vanilla -7) */
+    { U3S_KOC_NORMAL, 12, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -13, 0, 0, 0, 0, 0 }, /* s.MK (vanilla -1) */
+    { U3S_KOC_NORMAL, 16, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -18, 0, 0, 0, 0, 0 }, /* far s.HK (vanilla -7) */
+    { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -12, 0, 0, 0, 0, 0 }, /* c.MK (vanilla -3) */
+    { U3S_KOC_NORMAL, 8, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -14, 0, 0, 0, 0, 0 }, /* 6HP (vanilla -4; two entries, the second decides) */
     /*
      * The Ryuubi Kyaku (236K) is the special move of the command 30, and
      * the three strengths are the entries 32, 33 and 34 of the slot of the

@@ -3,7 +3,7 @@
 As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
 
 <!-- summary:start -->
-**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 3 verified in a fight test, 41 done but not yet measured, 9 partial, 81 not done.
+**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 10 verified in a fight test, 36 done but not yet measured, 8 partial, 80 not done.
 <!-- summary:end -->
 
 ## How to read this
@@ -150,7 +150,7 @@ The post's order. The number after each name is the character index.
 |:--|:--|:--|:--|
 | RY1 | 6MP: less knockback on hit, so links after it are reliable. | disc | — |
 | RY2 | Target combo far s.HP→s.HK: more forward movement on the 2nd hit. | disc | — |
-| RY3 | More hitstun on far s.MK, s.HK, close s.HP, c.HP, c.LK and c.MK, so none is negative on hit. | disc | partial ⚠ (only close s.HP, c.HP, c.MK are in the table, and close s.HP and c.HP stay negative) |
+| RY3 | More hitstun on far s.MK, s.HK, close s.HP, c.HP, c.LK and c.MK, so none is negative on hit. | disc | verified |
 | RY4 | LK Joudan Sokutou Geri (41236LK): hitbox extends down so it connects after close s.HP / c.HP on everyone. | disc | — |
 | RY5 | LP/MP DP knock opponents up less, and so do Shinkuu Hadoken's (SA I) middle hits, so the whole super connects after a DP. | disc | — |
 
@@ -215,7 +215,7 @@ The post's order. The number after each name is the character index.
 |:--|:--|:--|:--|
 | HU1 | Monster Lariat (236K) super-cancellable on hit, and supers juggle after it. | logic + disc | — |
 | HU2 | EX Giant Palm Bomber (63214PP) startup 22f → 17f. | disc | verified |
-| HU3 | c.LP and c.LK hitstun +1–2f. | disc | done |
+| HU3 | c.LP and c.LK hitstun +1–2f. | disc | verified |
 | HU4 | New EX Shootdown Backbreaker that allows juggles; distance chosen with LK+MK / MK+HK / LK+HK. | new | — |
 | HU5 | Meat Squasher (360K): startup 21/31/44 → 18/24/30; whiff recovery 30/33/36 → 26/29/32. | disc | done ⚠ |
 | HU6 | Frame 1 of landing from air hitstun: fix the offset hitboxes. | disc | — |
@@ -229,7 +229,7 @@ The post's order. The number after each name is the character index.
 | Q3 | All overhead/low rush punches ([4]6P/K, [P]) super-cancellable on hit/block/parry. | logic | — |
 | Q4 | Far s.LP startup 6f → 4f. | disc | verified |
 | Q5 | 4HK: cancel window extends past the first active frame. | disc | — |
-| Q6 | More hitstun on c.LK, c.MK and s.HK (s.HK is −10 on hit). | disc | done |
+| Q6 | More hitstun on c.LK, c.MK and s.HK (s.HK is −10 on hit). | disc | verified |
 | Q7 | High Speed Barrage (slaps), all versions: change the opponent's movement on the middle hits so every hit connects. | disc | — |
 | Q8 | EX slaps: first hit's hitbox extends down, to connect on crouchers. | disc | — |
 | Q9 | New EX (PP) Total Destruction (SA III) that grabs immediately on activation. | new | — |
@@ -244,13 +244,13 @@ The post's order. The number after each name is the character index.
 | RM1 | Stun bar short → regular. `pl_piyo_tbl[19]` 56 → 64 | table | done |
 | RM2 | c.MP damage +6 (nearly Ryu's). | disc | done |
 | RM3 | Close s.HP: the earlier hitboxes knock airborne opponents down like the later ones, with juggles after. | disc | — |
-| RM4 | More hitstun on far s.MK, far s.HK, c.MK and 6MK, so none is negative on hit. | disc | done |
+| RM4 | More hitstun on far s.MK, far s.HK, c.MK and 6MK, so none is negative on hit. | disc | verified |
 | RM5 | s.MK: less knockback on grounded opponents. Target combo s.MK→s.HK: bigger hitboxes on the 2nd hit. | disc | — |
 | RM6 | Chains c.LP→c.LK and c.LK→c.LP. | disc | — |
 | RM7 | Taunt length 131f → about 80f. | disc | — |
 | RM8 | Light of Virtue meter gain on startup/hit/block 0/1/1 → 1/3/2. | table + disc | — |
 | RM9 | Rising Rage Flash: all strengths super-cancellable on hit/block/parry; juggles after all versions. | logic + disc | — |
-| RM10 | Cold Blue Kick (63214K): LK and MK versions not negative on hit up close; MK version +2. | disc | — ⚠ |
+| RM10 | Cold Blue Kick (63214K): LK and MK versions not negative on hit up close; MK version +2. | disc | verified |
 | RM11 | Blue Nocturne (SA III): superflash only after a successful counter; meter spent on the counter, the recovery or being thrown, not on activation; bar a bit longer; juggles/knocks down airborne opponents. `super_arts_data[19][2]` 80/1 | table + logic + disc | partial (bar, 80 → 96) |
 
 ### Twelve (18)
@@ -258,7 +258,7 @@ The post's order. The number after each name is the character index.
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
 | TW1 | Health 1050 → 1120. `Com_Vital_Unit_Data[18]` | table | done |
-| TW2 | More hitstun on s.MP, far s.MP, s.HP, c.HP, s.LK, s.MK, s.HK, c.MK and 4MK, so none is negative on hit. | disc | done |
+| TW2 | More hitstun on s.MP, far s.MP, s.HP, c.HP, s.LK, s.MK, s.HK, c.MK and 4MK, so none is negative on hit. | disc | verified |
 | TW3 | c.MP and s.MK parryable high only; c.HP and 4MK parryable low only. | disc | — |
 | TW4 | 4MK: activate the earlier low hitboxes that exist but can't connect. | disc | — |
 | TW5 | Far s.MP, s.MP and c.MP special- and super-cancellable on hit/block/parry. | logic | done |
@@ -274,7 +274,7 @@ The post's order. The number after each name is the character index.
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| SN1 | More hitstun on close and far s.HP, c.HP, s.MK, far s.HK, c.MK and 6HP, so none is negative on hit. | disc | done |
+| SN1 | More hitstun on close and far s.HP, c.HP, s.MK, far s.HK, c.MK and 6HP, so none is negative on hit. | disc | verified |
 | SN2 | Sean Roll (214P) super-cancellable in the middle. | disc | — |
 | SN3 | Ryuubi Kyaku (236K) startup 25f (all) → 17/19/21f; the HK version knocks down. | disc | partial (all three 25 → 19 measured; one shared chain, and no knockdown) |
 | SN4 | Ryuubi Kyaku L/M: more hit advantage, so supers link after a hit. | disc | — |
@@ -297,10 +297,12 @@ No changes in the post.
 1. **The 3s' build crashed on the first frame of every fight.** `PLS00.c:check_cg_cancel_data()` read `wk->as->char_ix` while `wk->as` is still NULL (before the player's first move of the round). PR #1's checks only booted to the title screen. Fixed: the cancel rules are looked up only when there is a current move. Covered by `tests/match/test_harness.py`.
 2. **The hitstun and knockback overrides wrote to the wrong attack entry.** `upper3s.c` took the attack data index from the first frame of the move (a startup frame, without the engine's shift by 6), so the change went to an unrelated entry: Ryu's standing Jab went from −7 to −12 frames of hold (+3 → +8 on hit), and the moves of the table did not change. The synthetic unit tests encoded the same misreading, so they passed. Fixed: the entries are read from the attacking frames of the move's chain (`upper3s_chain_attacks()`), and the unit tests encode the index the way the engine reads it. Covered by `tests/match/test_harness.py`.
 
+3. **The hitstun values missed the spec's goal, and some moves were missing.** PR #1 derived the values from a model of the advantage; in the game several stayed negative and Remy's went far past it (far s.MK +19, c.MK +16, even the close s.HK, which the spec does not touch, +24). Some listed moves had no entry at all (Ryu's far s.MK and s.HK, Q's c.MK, Twelve's far s.MP and s.LK, Sean's close s.HP and far s.HK), and several entries were labelled with the wrong move (`koa` 1 is the far normal and 2 the command normal, not dash versions). Fixed: every value is set from the advantage measured in the real engine, to 0 on hit (Hugo's +2 frames and Remy's Cold Blue Kick +2 as the spec says), and `tests/match/test_hitstun.py` checks each move and its untouched neighbours.
+4. **The chain walk ran past the end of a move.** It did not stop at the commands that end a move (`comm_end`, `comm_jmp`, `comm_ret`, ...), so a move of Remy's listed the attack entries of the moves after it. Fixed in `upper3s_chain.c`. A move that branches (Twelve's c.HP plays its second and third hits only after the first connects) is patched with rows that name the attack entry (`U3S_KOC_ENTRY`).
+5. **RM10 was applied to Chun-Li.** Remy's Cold Blue Kick change was in Chun-Li's override table, on two of her specials. Fixed: removed there, and implemented for Remy (LK −4 → 0, MK −4 → +2 on hit up close).
+
 ### Still open
 
-1. **The hitstun values do not reach the spec's goal.** With the overrides now reaching the game, Ryu's close s.HP goes −2 → −1 and c.HP −6 → −5 on hit, still negative ("so they are not negative on hit"). PR #1 derived the values from a model of the advantage. They have to be set from measured advantage, item by item (RY3, Q6, RM4, TW2, SN1, HU3, and the hitstun parts of others).
-2. **RM10 was applied to Chun-Li.** Remy's Cold Blue Kick change is in Chun-Li's override table (`upper3s/pl14.c`, entries 28 and 29 of her attack slot), and `tests/upper3s/test_upper3s_ch_hitstun.c` asserts it. Remy's table (`upper3s/pl18.c`) still lists the item as a TODO.
-3. **HU5: check the move.** PR #1 reads the Meat Squasher's startup from the disc as 24/52/67, against the post's 21/31/44; light is close, medium and heavy are far off.
-4. **SN3 and SN9 are partial.** The three Ryuubi Kyaku share one chain, so all three are 19 frames (the spec asks 17/19/21) and the Roundhouse knockdown is not done. EX Dragon Smash is 5 frames (the spec asks 3), because the chain cannot be held shorter.
-5. **Documentation errors.** Issue #2 says `plpat16.c` is Makoto (it is Chun-Li; Makoto is `plpat17.c`, AGENTS.md §3.2). PR #1's `spec-map.md` says the whiff gain is `add_sp_arts_gauge_guard()` (that is the block gain; the code hooks `add_sp_arts_gauge_init()`). Chun-Li's table header calls SA I "Houyoku-sen" (it is Kikoushou). PR #1's table for Q labels entry 1 as "6LP"; in the game it is the far standing Jab.
+1. **HU5: check the move.** PR #1 reads the Meat Squasher's startup from the disc as 24/52/67, against the post's 21/31/44; light is close, medium and heavy are far off.
+2. **SN3 and SN9 are partial.** The three Ryuubi Kyaku share one chain, so all three are 19 frames (the spec asks 17/19/21) and the Roundhouse knockdown is not done. EX Dragon Smash is 5 frames (the spec asks 3), because the chain cannot be held shorter.
+3. **Documentation errors.** Issue #2 says `plpat16.c` is Makoto (it is Chun-Li; Makoto is `plpat17.c`, AGENTS.md §3.2). PR #1's `spec-map.md` says the whiff gain is `add_sp_arts_gauge_guard()` (that is the block gain; the code hooks `add_sp_arts_gauge_init()`). Chun-Li's table header calls SA I "Houyoku-sen" (it is Kikoushou). PR #1's table for Q labels entry 1 as "6LP"; in the game it is the far standing Jab.

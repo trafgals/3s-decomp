@@ -221,9 +221,14 @@ void upper3s_apply_move(WORK* wk, const Upper3sMove* move) {
         s32 n;
         s32 k;
 
-        n = upper3s_chain_open(wk, move->koc, move->index, &chain)
-                ? upper3s_chain_attacks(&chain, entries, U3S_CHAIN_MAX_ATTACKS)
-                : 0;
+        if (move->koc == U3S_KOC_ENTRY) {
+            entries[0] = move->index;
+            n = 1;
+        } else {
+            n = upper3s_chain_open(wk, move->koc, move->index, &chain)
+                    ? upper3s_chain_attacks(&chain, entries, U3S_CHAIN_MAX_ATTACKS)
+                    : 0;
+        }
 
         if (n == 0) {
             upper3s_note_failure(move, move->flags & (U3S_MV_IMPACT | U3S_MV_HS_ME | U3S_MV_HS_YOU));

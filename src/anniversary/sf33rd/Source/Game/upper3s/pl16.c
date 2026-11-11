@@ -68,8 +68,11 @@ const Upper3sSuperArt upper3s_super_art_q[4] = {
  */
 
 const Upper3sMove upper3s_moves_q[] = {
-    { U3S_KOC_NORMAL, 27, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0 },  /* 2LK - crouching Short */
-    { U3S_KOC_NORMAL, 15, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -27, 0, 0, 0, 0, 0 }, /* 5HK - standing Roundhouse */
+    /* Hitstun so the move is not negative on hit: the hold of the defender (hs_you) that makes
+     * it 0 on hit, measured in the real engine (tests/match/test_hitstun.py). */
+    { U3S_KOC_NORMAL, 27, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0 }, /* c.LK (vanilla -2) */
+    { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -11, 0, 0, 0, 0, 0 }, /* c.MK (vanilla -2) */
+    { U3S_KOC_NORMAL, 15, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -27, 0, 0, 0, 0, 0 }, /* s.HK, close and far share the entry (vanilla -10) */
     /*
      * The standing Jab of Q starts in 6 frames when it is done with a
      * dash - the 6LP and the 4LP, which share their chain - and in 4

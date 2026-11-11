@@ -54,26 +54,9 @@ const Upper3sSuperArt upper3s_super_art_chunli[4] = {
  *   2HP 24    3HP 25    1HP 26     2LK 27    3LK 28    1LK 29
  *   2MK 30    3MK 31    1MK 32     2HK 33    3HK 34    1HK 35
  *
- * 3s': "Increase hit advantage of Short/Forward Cold Blue Kicks (63214K) so
- * they are not negative on hit from up close; make Forward version +2 so that
- * supers can be linked off it at point-blank."
- *
- * The Cold Blue Kick is the special 29 of the retail data, in its four
- * versions: the light one (the move 28 of the slot 5), the medium one (29),
- * the heavy one (30) and the EX one (31, the 63214K of the document).
- *
- * The advantage of a hit is the difference between how long the defender is
- * held and how long the attacker is locked, and both are read from the data
- * of the disc.  `tools/upper3s/hit_advantage.py` computes the advantage of
- * every move out of that data.
- *
- * The hitstun of a move is the hold of the defender, and that is the field
- * `hs_you` of the attack data (`UNK_7.hs_you`), so that is what is raised
- * here.  The two versions of the Cold Blue Kick that are negative on hit in
- * the retail game are the light one (-10 on hit) and the medium one (-10);
- * both are raised to +2, which is the end state the document asks for.  The
- * heavy version (+10) and the EX version (+4) are already past it and are
- * not changed.
+ * The Cold Blue Kick (63214K) is a move of Remy, not of Chun-Li: an earlier version of
+ * this table changed two of Chun-Li's specials under its name. Its change is in
+ * upper3s/pl18.c (docs/upper3s/remaining.md RM10).
  *
  * TODO(3s'): "Tensei Ranka (SA III) - advantage on knockdown increased enough
  * to allow crossup attempts afterward" needs the index of the super inside
@@ -82,8 +65,6 @@ const Upper3sSuperArt upper3s_super_art_chunli[4] = {
  */
 
 const Upper3sMove upper3s_moves_chunli[] = {
-    { U3S_KOC_ATTACK, 28, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -17, 0, 0, 0, 0, 0 }, /* 632LK - the light Cold Blue Kick */
-    { U3S_KOC_ATTACK, 29, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -15, 0, 0, 0, 0, 0 }, /* 632MK - the medium Cold Blue Kick */
     /*
      * The crouching Jab (2LP) is the only normal of the whole cast that
      * starts in 2 frames, and the design document asks for 3 frames: it

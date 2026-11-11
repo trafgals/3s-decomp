@@ -78,8 +78,12 @@ const Upper3sSuperArt upper3s_super_art_ryu[4] = {
  */
 
 const Upper3sMove upper3s_moves_ryu[] = {
-    { U3S_KOC_NORMAL, 6, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -12, 0, 0, 0, 0, 0 },  /* 5HP - close Fierce */
-    { U3S_KOC_NORMAL, 24, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -12, 0, 0, 0, 0, 0 }, /* 2HP - crouching Fierce */
-    { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -11, 0, 0, 0, 0, 0 }, /* 2MK - crouching Forward */
+    /* Hitstun so the move is not negative on hit: the hold of the defender (hs_you) that makes
+     * it 0 on hit, measured in the real engine (tests/match/test_hitstun.py). */
+    { U3S_KOC_NORMAL, 13, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -13, 0, 0, 0, 0, 0 }, /* far s.MK (vanilla -4 on hit) */
+    { U3S_KOC_NORMAL, 15, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -14, 0, 0, 0, 0, 0 }, /* s.HK (vanilla -3) */
+    { U3S_KOC_NORMAL, 6, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -13, 0, 0, 0, 0, 0 }, /* close s.HP (vanilla -2) */
+    { U3S_KOC_NORMAL, 24, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -17, 0, 0, 0, 0, 0 }, /* c.HP (vanilla -6) */
+    { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -11, 0, 0, 0, 0, 0 }, /* c.MK (vanilla -2) */
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }                              /* terminator */
 };

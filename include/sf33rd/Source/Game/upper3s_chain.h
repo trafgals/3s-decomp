@@ -115,6 +115,9 @@ int upper3s_chain_info(const Upper3sChain* chain, Upper3sChainInfo* info);
 #define U3S_CHAIN_MAX_ATTACKS 16
 s32 upper3s_chain_attacks(const Upper3sChain* chain, s16* out, s32 max);
 
+/* The attack entries of every block of the move, for diagnostics (see upper3s_chain.c). */
+s32 upper3s_chain_block_attacks(const Upper3sChain* chain, s16* out, s32 max);
+
 /*
  * Sets the startup of the move to `frames` game frames.
  *
