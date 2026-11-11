@@ -182,8 +182,8 @@ int main(void) {
         wk.wu.char_index = 21;
         upper3s_apply_character(&wk);
 
-        check(upper3s_damage_permille(U3S_REMY, &wk.wu) == 1110,
-              "Remy: the crouching Strong does six points more damage");
+        check(upper3s_damage_base(U3S_REMY, &wk.wu) == 85,
+              "Remy: the crouching Strong does the damage of pow 17 (retail 11, Ryu's 18)");
     }
 
     /* A move that the design document does not touch keeps the hitstun of the

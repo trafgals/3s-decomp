@@ -80,7 +80,11 @@ const Upper3sSuperArt upper3s_super_art_remy[4] = {
  */
 
 const Upper3sMove upper3s_moves_remy[] = {
-    { U3S_KOC_NORMAL, 21, U3S_MV_DAMAGE_PERMILLE, 0, 1110, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* 2MP - crouching Strong */
+    /* RM2 "Increase damage of crouching Strong by 6pt to almost match Ryu's." The document's
+     * points are the attack's `pow` (Power_Data[pow] = 5 * pow): Remy's c.MP is pow 11, Ryu's is
+     * 18, and 11 + 6 = 17 "almost matches". So the base damage is Power_Data[17] = 85 (retail 55).
+     * An earlier version scaled it by 1110 permille, about +1 point. */
+    { U3S_KOC_NORMAL, 21, U3S_MV_DAMAGE, 85, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* c.MP */
     /* RM10, the Cold Blue Kick (63214K): "Increase hit advantage of Short/Forward Cold Blue
      * Kicks so they are not negative on hit from up close; make Forward version +2". Both are
      * -4 on hit up close in the retail game, with a hold of 12 (koc 5, the specials: cix 46 and 47,

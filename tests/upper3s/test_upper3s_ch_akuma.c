@@ -62,10 +62,9 @@ static s16 damage_permille(s16 char_id, s16 koc, s16 index) {
 static void test_the_kkz_is_nerfed(void) {
     printf("akuma: the KKZ does 95 instead of 107\n");
 
-    check(damage_permille(U3S_AKUMA, U3S_KOC_SUPER, 48) == 888, "the KKZ is scaled to 95 / 107");
-    check(damage_permille(U3S_AKUMA, U3S_KOC_SUPER, 49) == 888, "the KKZ is scaled to 95 / 107");
-    check(damage_permille(U3S_AKUMA, U3S_KOC_SUPER, 50) == 888, "the KKZ is scaled to 95 / 107");
-    check(damage_permille(U3S_AKUMA, U3S_KOC_SUPER, 51) == 888, "the KKZ is scaled to 95 / 107");
+    /* Every hit of the KKZ lands during the animation 63 (tests/match/test_damage.py). */
+    check(damage_permille(U3S_AKUMA, U3S_KOC_SUPER, 63) == 888, "the KKZ is scaled to 95 / 107");
+    check(damage_permille(U3S_AKUMA, U3S_KOC_SUPER, 48) == 1000, "animation 48, which the KKZ does not play, is not");
 }
 
 /*

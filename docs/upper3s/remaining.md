@@ -3,7 +3,7 @@
 As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
 
 <!-- summary:start -->
-**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 10 verified in a fight test, 36 done but not yet measured, 8 partial, 80 not done.
+**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 28 verified in a fight test, 18 done but not yet measured, 8 partial, 80 not done.
 <!-- summary:end -->
 
 ## How to read this
@@ -68,10 +68,10 @@ The post's order. The number after each name is the character index.
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| CL1 | Houyoku-sen (SA II): 1 stock instead of 2; bar the longest possible, as Shin-Shoryuken. `super_arts_data[15][1]` 104/2 → 128/1 | table | done |
+| CL1 | Houyoku-sen (SA II): 1 stock instead of 2; bar the longest possible, as Shin-Shoryuken. `super_arts_data[15][1]` 104/2 → 128/1 | table | verified |
 | CL2 | c.MK: cancel window no longer allows super-late cancels. | disc | — |
 | CL3 | c.LP startup 2f → 3f. | disc | verified |
-| CL4 | Tensei Ranka (SA III): startup hitbox reaches the floor (can't be crouched); pulls in and down so all hits connect vs airborne opponents; enough knockdown advantage for a crossup; 2 stocks; bar as long as Shippu's. `super_arts_data[15][2]` 72/3 → 80/2 | table + disc | partial (stocks and bar) |
+| CL4 | Tensei Ranka (SA III): startup hitbox reaches the floor (can't be crouched); pulls in and down so all hits connect vs airborne opponents; enough knockdown advantage for a crossup; 2 stocks; bar as long as Shippu's. `super_arts_data[15][2]` 72/3 → 80/2 | table + disc | partial (stocks and bar verified) |
 | CL5 | Houyoku-sen's middle hits no longer un-combo vs crouching Makoto etc. | disc | — |
 | CL6 | Goes through the mandatory standing frame after wakeup, like every other character. | find | — |
 | CL7 | Crouching head hurtbox 2–3px higher and 3–4px further back, in every crouching animation (neutral, crouch-block, non-low-profile attacks). | disc | — |
@@ -80,8 +80,8 @@ The post's order. The number after each name is the character index.
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| KN1 | Shippu Jinrai Kyaku (SA III): 2 stocks instead of 3; damage −15%. `super_arts_data[11][2]` 80/3 → 80/2 | table | done |
-| KN2 | Jab DP (623LP) damage 15 → 11.5. | disc | done |
+| KN1 | Shippu Jinrai Kyaku (SA III): 2 stocks instead of 3; damage −15%. `super_arts_data[11][2]` 80/3 → 80/2 | table | verified |
+| KN2 | Jab DP (623LP) damage 15 → 11.5. | disc | verified |
 | KN3 | Target combo MP→HP: less knockback on grounded opponents from the 2nd hit, so DPs miss less after it. | disc | — |
 | KN4 | Fix the crash when killing Makoto with a neutral throw (may not be present in this version). | find | — |
 
@@ -90,16 +90,16 @@ The post's order. The number after each name is the character index.
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
 | YU1 | Genei Jin (SA III) no longer makes all his normals count as super hits for priority. | find | — (PR #1 says the flag is in the disc data) |
-| YU2 | Genei Jin bar as long as Sourai Rengeki's; the super's timer is unchanged. `super_arts_data[3][2]` 72 → 88 | table | done |
-| YU3 | Sourai Rengeki (SA II): 2 stocks instead of 3. `super_arts_data[3][1]` 88/3 → 88/2 | table | done |
+| YU2 | Genei Jin bar as long as Sourai Rengeki's; the super's timer is unchanged. `super_arts_data[3][2]` 72 → 88 | table | verified |
+| YU3 | Sourai Rengeki (SA II): 2 stocks instead of 3. `super_arts_data[3][1]` 88/3 → 88/2 | table | verified |
 | YU4 | Upkicks (623K) hitbox reaches further down. | disc | — |
 
 ### Makoto (16)
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| MK1 | Abare Tosanami (SA II) stun −50%. | disc | done |
-| MK2 | Fukiage L/M/H stun 29/31/31 → 27/28/31. | disc | done |
+| MK1 | Abare Tosanami (SA II) stun −50%. | disc | verified |
+| MK2 | Fukiage L/M/H stun 29/31/31 → 27/28/31. | disc | verified |
 | MK3 | Tanden Renki (SA III): 236K while active deactivates it. It counts as a special, uses her post-Hayate taunt animation, and can be cancelled into attacks (not block or movement) at any time. | new | — |
 | MK4 | Karakusa's startup no longer auto throw-techs when she's thrown out of it. | find | — |
 | MK5 | Seichusen Godanzuki (SA I): more vacuum and hitstun on the first hit. | disc | — |
@@ -112,8 +112,8 @@ The post's order. The number after each name is the character index.
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| DD1 | Rocket Uppercut (SA I): less stun. | disc | done |
-| DD2 | Rolling Thunder (SA II): more stun. | disc | done |
+| DD1 | Rocket Uppercut (SA I): less stun. | disc | verified |
+| DD2 | Rolling Thunder (SA II): more stun. | disc | verified |
 | DD3 | Rocket Uppercut's character point: knocks opponents backwards less often in juggles. | disc | — |
 | DD4 | Corkscrew Blow vacuums the opponent in on hit. | disc | — |
 | DD5 | Rolling Thunder turns around if he dashes again and passes under the opponent. | logic | — |
@@ -123,16 +123,16 @@ The post's order. The number after each name is the character index.
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| UR1 | Tyrant Slaughter/Punish (SA I): fully connects vs crouching opponents and in most juggles; damage +25% (as Shin Shoryuken); 1 stock instead of 2; bar slightly longer. `super_arts_data[13][0]` 104/2 | table + disc | partial (stocks, bar, damage) |
+| UR1 | Tyrant Slaughter/Punish (SA I): fully connects vs crouching opponents and in most juggles; damage +25% (as Shin Shoryuken); 1 stock instead of 2; bar slightly longer. `super_arts_data[13][0]` 104/2 | table + disc | partial (stocks, bar and +25% damage verified; the connect fix is not done) |
 
 ### Akuma (14)
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| AK1 | Stun bar short → regular. `pl_piyo_tbl[14]` 56 → 64 | table | done |
-| AK2 | Messatsu Gou Rasen (SA II) bar shorter than SA I and SA III. `super_arts_data[14][1]` 112; SA I and SA III are also 112 | table | done |
+| AK1 | Stun bar short → regular. `pl_piyo_tbl[14]` 56 → 64 | table | verified |
+| AK2 | Messatsu Gou Rasen (SA II) bar shorter than SA I and SA III. `super_arts_data[14][1]` 112; SA I and SA III are also 112 | table | verified |
 | AK3 | KKZ (hidden super) motion D,D,D+PPP → D,D+PP. | table | — |
-| AK4 | KKZ damage 107 → 95. | disc | done |
+| AK4 | KKZ damage 107 → 95. | disc | verified |
 | AK5 | 6MP stays throw-invincible. | none | n/a |
 
 ### Yang (10)
@@ -162,7 +162,7 @@ The post's order. The number after each name is the character index.
 | OR2 | Oniyama ([2]8P): more hitstop and juggle time, so super cancels from it are useful. | disc | — |
 | OR3 | New forward throw (6+LP+LK): the back throw's animation mirrored, about half the distance. | new | — |
 | OR4 | Neutral throw can't be escaped before 3–4 hits, like other mashable grabs. | find | — |
-| OR5 | Kishin Riki (SA I): bar as long as Tengu Stone's. `super_arts_data[9][0]` 104 → 112 | table | done |
+| OR5 | Kishin Riki (SA I): bar as long as Tengu Stone's. `super_arts_data[9][0]` 104 → 112 | table | verified |
 | OR6 | Kishin Riki: Human Pillar Driver (63214P) stays a hit-grab during it, so it combos; more damage on the air grab when it's combo'd into; QCT+P deactivates it with a shortened activation animation. | new | — |
 
 ### Elena (8)
@@ -180,8 +180,8 @@ The post's order. The number after each name is the character index.
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| IB1 | Health 1035 → 1050 (Twelve's). `Com_Vital_Unit_Data[7]` | table | done |
-| IB2 | Yami Shigure (SA III): 2 stocks instead of 1. `super_arts_data[7][2]` 80/1 → 80/2 | table | done |
+| IB1 | Health 1035 → 1050 (Twelve's). `Com_Vital_Unit_Data[7]` | table | verified |
+| IB2 | Yami Shigure (SA III): 2 stocks instead of 1. `super_arts_data[7][2]` 80/1 → 80/2 | table | verified |
 | IB3 | Tsuiji Goe (623P): special- and super-cancellable almost straight after takeoff; a kunai thrown from it faces the right way if she hasn't passed over the opponent. | disc | — |
 | IB4 | The target-combo s.HP (4MP→HP and LP→MP→HP) never knocks down. Today one of its two hitboxes is marked knockdown and the other isn't. | disc | — |
 | IB5 | Taunt: can't be throw-teched, and she can parry or attack in the air once the opponent recovers. | logic | partial (throw tech) |
@@ -241,8 +241,8 @@ The post's order. The number after each name is the character index.
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| RM1 | Stun bar short → regular. `pl_piyo_tbl[19]` 56 → 64 | table | done |
-| RM2 | c.MP damage +6 (nearly Ryu's). | disc | done |
+| RM1 | Stun bar short → regular. `pl_piyo_tbl[19]` 56 → 64 | table | verified |
+| RM2 | c.MP damage +6 (nearly Ryu's). | disc | verified |
 | RM3 | Close s.HP: the earlier hitboxes knock airborne opponents down like the later ones, with juggles after. | disc | — |
 | RM4 | More hitstun on far s.MK, far s.HK, c.MK and 6MK, so none is negative on hit. | disc | verified |
 | RM5 | s.MK: less knockback on grounded opponents. Target combo s.MK→s.HK: bigger hitboxes on the 2nd hit. | disc | — |
@@ -251,13 +251,13 @@ The post's order. The number after each name is the character index.
 | RM8 | Light of Virtue meter gain on startup/hit/block 0/1/1 → 1/3/2. | table + disc | — |
 | RM9 | Rising Rage Flash: all strengths super-cancellable on hit/block/parry; juggles after all versions. | logic + disc | — |
 | RM10 | Cold Blue Kick (63214K): LK and MK versions not negative on hit up close; MK version +2. | disc | verified |
-| RM11 | Blue Nocturne (SA III): superflash only after a successful counter; meter spent on the counter, the recovery or being thrown, not on activation; bar a bit longer; juggles/knocks down airborne opponents. `super_arts_data[19][2]` 80/1 | table + logic + disc | partial (bar, 80 → 96) |
+| RM11 | Blue Nocturne (SA III): superflash only after a successful counter; meter spent on the counter, the recovery or being thrown, not on activation; bar a bit longer; juggles/knocks down airborne opponents. `super_arts_data[19][2]` 80/1 | table + logic + disc | partial (bar 80 → 96 verified) |
 
 ### Twelve (18)
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| TW1 | Health 1050 → 1120. `Com_Vital_Unit_Data[18]` | table | done |
+| TW1 | Health 1050 → 1120. `Com_Vital_Unit_Data[18]` | table | verified |
 | TW2 | More hitstun on s.MP, far s.MP, s.HP, c.HP, s.LK, s.MK, s.HK, c.MK and 4MK, so none is negative on hit. | disc | verified |
 | TW3 | c.MP and s.MK parryable high only; c.HP and 4MK parryable low only. | disc | — |
 | TW4 | 4MK: activate the earlier low hitboxes that exist but can't connect. | disc | — |
@@ -267,7 +267,7 @@ The post's order. The number after each name is the character index.
 | TW8 | Jab A.X.E. (214LP): more hit and block advantage, at most −1/−2 on block. | disc | — |
 | TW9 | All air normals special-cancellable on hit/block into A.X.E. (j.214P) or D.R.A. (j.214K), and super-cancellable into X.F.L.A.T. | logic | done |
 | TW10 | X.N.D.L.: drags juggled opponents down so more hits connect. | disc | — |
-| TW11 | X.F.L.A.T. (SA II): remove the low-damage air-to-air version (always full damage); 2 stocks. `super_arts_data[18][1]` 112/1 → 112/2 | table + disc | partial (stocks) |
+| TW11 | X.F.L.A.T. (SA II): remove the low-damage air-to-air version (always full damage); 2 stocks. `super_arts_data[18][1]` 112/1 → 112/2 | table + disc | partial (2 stocks verified) |
 | TW12 | X.C.O.P.Y. (SA III): EX moves (maybe even the opponent's super) by spending chunks of the super's timer; startup 12f → 1f; when hit in its recovery he takes 66% damage instead of extra damage. | new + disc | — (startup in progress; its chain loops) |
 
 ### Sean (12)
@@ -300,6 +300,12 @@ No changes in the post.
 3. **The hitstun values missed the spec's goal, and some moves were missing.** PR #1 derived the values from a model of the advantage; in the game several stayed negative and Remy's went far past it (far s.MK +19, c.MK +16, even the close s.HK, which the spec does not touch, +24). Some listed moves had no entry at all (Ryu's far s.MK and s.HK, Q's c.MK, Twelve's far s.MP and s.LK, Sean's close s.HP and far s.HK), and several entries were labelled with the wrong move (`koa` 1 is the far normal and 2 the command normal, not dash versions). Fixed: every value is set from the advantage measured in the real engine, to 0 on hit (Hugo's +2 frames and Remy's Cold Blue Kick +2 as the spec says), and `tests/match/test_hitstun.py` checks each move and its untouched neighbours.
 4. **The chain walk ran past the end of a move.** It did not stop at the commands that end a move (`comm_end`, `comm_jmp`, `comm_ret`, ...), so a move of Remy's listed the attack entries of the moves after it. Fixed in `upper3s_chain.c`. A move that branches (Twelve's c.HP plays its second and third hits only after the first connects) is patched with rows that name the attack entry (`U3S_KOC_ENTRY`).
 5. **RM10 was applied to Chun-Li.** Remy's Cold Blue Kick change was in Chun-Li's override table, on two of her specials. Fixed: removed there, and implemented for Remy (LK −4 → 0, MK −4 → +2 on hit up close).
+
+6. **The KKZ's damage change missed the KKZ.** The rows scaled animations 48–51; every hit of the KKZ lands during animation 63. Fixed (AK4: the first hit 60 → 53 bar units, 95/107).
+7. **Shippu lost 11%, not 15%.** Its last four kicks play in a finishing animation (52) that the rows did not include; damage is looked up by the animation playing when a hit lands. Fixed (KN1: 45 → 38 bar units).
+8. **Remy's c.MP got about +1 point instead of +6.** The document's points are the attack's `pow` (`Power_Data[pow]` = 5 × pow): Remy's c.MP is 11, Ryu's 18, so "+6pt to almost match Ryu's" is pow 17; the rows scaled it by 1110 permille. Fixed (RM2: 8 → 13 bar units, Ryu's is 14).
+9. **Abare Tosanami's stun rows were on the wrong animations.** They named animations 44 and 45, which have no attack frames, and missed 47, where three of its four hits land; only the first hit was halved. Fixed (MK1: 22 → 9 stun). The super only connects from near a wall, which the test sets up.
+10. **Ibuki's health came from a misread column.** PR #1 read a column of `Com_Vital_Unit_Data` where Ibuki looks like the healthiest character; humans read column 2, where she has 950 and Twelve 997, and scaled Necro's row (950 → 951). Fixed: she takes Twelve's retail row (IB1: 950 → 997).
 
 ### Still open
 

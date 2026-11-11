@@ -66,6 +66,10 @@ const Upper3sMove upper3s_moves_ken[] = {
     { U3S_KOC_SUPER, 44, U3S_MV_DAMAGE_PERMILLE, 0, 850, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* SA III, light */
     { U3S_KOC_SUPER, 45, U3S_MV_DAMAGE_PERMILLE, 0, 850, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* SA III, medium */
     { U3S_KOC_SUPER, 46, U3S_MV_DAMAGE_PERMILLE, 0, 850, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* SA III, heavy / EX */
+    /* Every strength of Shippu ends in the animation 52 (its last four kicks), and the damage
+     * is looked up by the animation playing when a hit lands; without this row those hits
+     * kept the retail damage (measured by tests/match/test_damage.py). */
+    { U3S_KOC_SUPER, 52, U3S_MV_DAMAGE_PERMILLE, 0, 850, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* SA III, the last kicks */
     /* The jab dragon punch (623+LP): 11.5 / 15 = 767 permille. */
     { U3S_KOC_ATTACK, 28, U3S_MV_DAMAGE_PERMILLE, 0, 767, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } /* terminator */

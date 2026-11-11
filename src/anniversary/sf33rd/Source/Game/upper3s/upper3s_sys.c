@@ -134,31 +134,22 @@ s16 upper3s_sys_health_source(s16 char_id, s16* scale) {
          * Third Strike Upper: "Health increased from 1035 to 1050, same as
          * Twelve's health."
          *
-         * The numbers of the design document do not exist in the retail
-         * table (the table has no 1035 for Ibuki and no 1050 for Twelve in
-         * the same cell), and its ordering - Ibuki below Twelve below the
-         * standard cast - is the opposite of the retail one (Ibuki has the
-         * most health of the whole game with 1657, Twelve has 1530 and the
-         * standard cast has 1466).
-         *
-         * The intent is followed instead of the literal numbers:
-         *
-         *   - Twelve gets the health of the standard cast.  The standard
-         *     cast of the document is "Sean/Remy/Necro/etc."; Necro is
-         *     named explicitly and his retail row is the one that Yun,
-         *     Makoto and Q share as well, so it is the row the document
-         *     means.  Twelve goes from 1530 to 1466.
-         *   - Ibuki gets the same row, scaled by the ratio the document
-         *     gives between Ibuki and the standard cast (1050 / 1120 =
-         *     937 permille), so that the order of the document (Ibuki
-         *     below the standard cast) is kept.
+         * The document's numbers are from another version; the relation it
+         * states is followed. In a fight (a human player reads column 2 of
+         * Com_Vital_Unit_Data, see PLS02.c:setup_vitality()) the retail
+         * health is Ibuki 950, Twelve 997, Necro and Remy 1016: the same
+         * order as the document's. So Ibuki gets Twelve's retail row (950 ->
+         * 997). An earlier version read another column of the table, where
+         * Ibuki looks like the healthiest character, and scaled Necro's row
+         * instead (950 -> 951). Measured by tests/match/test_data.py.
          */
-        *scale = 937;
-        return U3S_NECRO;
+        return U3S_TWELVE;
 
     case U3S_TWELVE:
         /* Third Strike Upper: "Health increased from 1050 to 1120, the same
-         * as Sean/Remy/Necro/etc." - see the comment of Ibuki above. */
+         * as Sean/Remy/Necro/etc." Necro's (and Remy's) retail row: 997 ->
+         * 1016 in a fight. (Sean's is 1064 in this version, so the three are
+         * not equal here; Necro and Remy are two of the three.) */
         return U3S_NECRO;
 
     default:

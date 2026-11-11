@@ -71,10 +71,9 @@ const Upper3sSuperArt upper3s_super_art_akuma[4] = {
  */
 
 const Upper3sMove upper3s_moves_akuma[] = {
-    /* The KKZ: 95 / 107 = 888 permille. */
-    { U3S_KOC_SUPER, 48, U3S_MV_DAMAGE_PERMILLE, 0, 888, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { U3S_KOC_SUPER, 49, U3S_MV_DAMAGE_PERMILLE, 0, 888, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { U3S_KOC_SUPER, 50, U3S_MV_DAMAGE_PERMILLE, 0, 888, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { U3S_KOC_SUPER, 51, U3S_MV_DAMAGE_PERMILLE, 0, 888, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    /* The KKZ: 95 / 107 = 888 permille. Every hit of the KKZ lands during the animation 63
+     * (measured by tests/match/test_damage.py); an earlier version scaled 48-51, which the
+     * KKZ does not play. */
+    { U3S_KOC_SUPER, 63, U3S_MV_DAMAGE_PERMILLE, 0, 888, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } /* terminator */
 };

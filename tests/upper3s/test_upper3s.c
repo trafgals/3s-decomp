@@ -393,13 +393,14 @@ static void test_the_stun_bar_of_akuma_and_remy(void) {
 }
 
 /*
- * The health of Twelve and of Ibuki is taken from the row of the standard
- * cast; Ibuki gets that row scaled by the ratio of the design document.
+ * Twelve takes the health of the standard cast (Necro's row) and Ibuki takes
+ * Twelve's retail row (the in-game values are checked by
+ * tests/match/test_data.py).
  */
 static void test_the_health_of_twelve_and_ibuki(void) {
     s16 scale;
 
-    printf("health: Twelve and Ibuki take the health of the standard cast\n");
+    printf("health: Twelve takes the standard cast's health, Ibuki Twelve's\n");
 
     scale = 0;
     check(upper3s_sys_health_source(U3S_TWELVE, &scale) == U3S_NECRO,
@@ -407,9 +408,8 @@ static void test_the_health_of_twelve_and_ibuki(void) {
     check(scale == 1000, "Twelve takes the health unscaled");
 
     scale = 0;
-    check(upper3s_sys_health_source(U3S_IBUKI, &scale) == U3S_NECRO,
-          "Ibuki takes the health of the standard cast");
-    check(scale == 937, "Ibuki takes 937 permille of it");
+    check(upper3s_sys_health_source(U3S_IBUKI, &scale) == U3S_TWELVE, "Ibuki takes Twelve's retail health");
+    check(scale == 1000, "Ibuki takes it unscaled");
 
     scale = 0;
     check(upper3s_sys_health_source(U3S_KEN, &scale) == U3S_KEN, "Ken keeps his own health");

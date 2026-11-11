@@ -77,9 +77,13 @@ const Upper3sSuperArt upper3s_super_art_makoto[4] = {
  */
 
 const Upper3sMove upper3s_moves_makoto[] = {
-    { U3S_KOC_SUPER, 43, U3S_MV_STUN_PERMILLE, 0, 0, 0, 0, 0, 0, 500, 0, 0, 0, 0 }, /* Abare Tosanami, light */
-    { U3S_KOC_SUPER, 44, U3S_MV_STUN_PERMILLE, 0, 0, 0, 0, 0, 0, 500, 0, 0, 0, 0 }, /* Abare Tosanami, medium */
-    { U3S_KOC_SUPER, 45, U3S_MV_STUN_PERMILLE, 0, 0, 0, 0, 0, 0, 500, 0, 0, 0, 0 }, /* Abare Tosanami, heavy / EX */
+    /* Abare Tosanami (SA II, 236236K) leaps back (animation 46), bounces off the wall (43,
+     * which lands the first hit) and strikes (47, three more hits); it only connects from
+     * near a wall. The stun is looked up by the animation playing when a hit lands, so both
+     * need the row (measured by tests/match/test_damage.py: 19 -> 10). An earlier version
+     * had rows for 44 and 45 instead of 47: those animations have no attack frames. */
+    { U3S_KOC_SUPER, 43, U3S_MV_STUN_PERMILLE, 0, 0, 0, 0, 0, 0, 500, 0, 0, 0, 0 }, /* Abare Tosanami, the bounce */
+    { U3S_KOC_SUPER, 47, U3S_MV_STUN_PERMILLE, 0, 0, 0, 0, 0, 0, 500, 0, 0, 0, 0 }, /* Abare Tosanami, the strikes */
     { U3S_KOC_ATTACK, 36, U3S_MV_STUN, 0, 0, 27, 0, 0, 0, 0, 0, 0, 0, 0 },        /* Fukiage, light */
     { U3S_KOC_ATTACK, 37, U3S_MV_STUN, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 0 },        /* Fukiage, medium */
     { U3S_KOC_ATTACK, 38, U3S_MV_STUN, 0, 0, 31, 0, 0, 0, 0, 0, 0, 0, 0 },        /* Fukiage, heavy */
