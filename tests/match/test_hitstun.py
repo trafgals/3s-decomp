@@ -105,6 +105,38 @@ class BlockAdvantage(unittest.TestCase):
                 self.assertEqual(advantage(button, "upper3s", True), advantage(button, "vanilla", True))
 
 
+class Knockback(unittest.TestCase):
+    def test_ryu_6mp(self):
+        # RY1 "Decrease opponent knockback from F+Strong (6MP) on hit". The distance between the two
+        # after the second hit's push.
+        def pushed(build):
+            rows = F.run(["1 6+MP"] + F.wait(60), p1="ryu", p2="ken", pos=(400, 440), build=build)
+            free = F.free(rows, 1, F.first_hit(rows))
+            r = F.player(rows, free, 1)["x"] - F.player(rows, free, 0)["x"]
+            return r
+
+        self.assertEqual(pushed("vanilla"), 113)  # Ken leaves hitstun 113 apart
+        self.assertEqual(pushed("upper3s"), 101)
+
+    def test_ken_target_combo_into_dp(self):
+        # KN3 "Grounded opponent knockback on 2nd hit of Target Combo Strong->Fierce decreased
+        # slightly, to help DPs miss less often afterward / in the corner." A DP cancelled from the
+        # second hit connects when the defender takes three hits.
+        def connects(button, build, corner=False):
+            lead = ["300 6 4", "20 5 5"] if corner else []
+            rows = F.run(lead + ["1 5+MP", "6 5", "1 5+HP", "9 5"] + F.motion("623", button) + F.wait(60),
+                         p1="ken", p2="ryu", pos=(400, 440), build=build)
+            return len([b for a, b in zip(rows, rows[1:]) if b["p"][1]["vit"] < a["p"][1]["vit"]]) >= 3
+
+        for corner in (False, True):
+            with self.subTest(corner=corner):
+                self.assertTrue(connects("LP", "vanilla", corner))
+                for button in ("MP", "HP"):
+                    self.assertFalse(connects(button, "vanilla", corner))
+                    self.assertTrue(connects(button, "upper3s", corner))
+
+
+
 class Durations(unittest.TestCase):
     """Moves made shorter by cutting their chain (upper3s_chain_set_tail())."""
 

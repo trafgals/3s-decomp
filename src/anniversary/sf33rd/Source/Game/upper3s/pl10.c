@@ -63,6 +63,19 @@ const Upper3sSuperArt upper3s_super_art_ken[4] = {
  */
 
 const Upper3sMove upper3s_moves_ken[] = {
+    /*
+     * KN3 - "Grounded opponent knockback on 2nd hit of Target Combo Strong->Fierce decreased
+     * slightly, to help DPs miss less often afterward / in the corner." The target combo's s.HP is
+     * normal animation 157 and loads attack entry 8 (no other move does), whose knockback is impact
+     * 19 (step table 3 of bin2obj/etc.c:_select_hit_dsd; 16-19 are the steps 0-3 of its family).
+     *
+     * Measured, a DP cancelled from the second hit: the LP one connects from up to 50 apart, the MP
+     * and HP ones never, midscreen or in the corner. One or two steps less (18, 17; the push after
+     * the hit 72 -> 60 / 48 px) change none of that. The smallest step, 16 (push 32 px), makes all
+     * three connect, midscreen and in the corner, which is the post's goal; "slightly" is a guess of
+     * the post that the data does not bear out, so the goal is followed.
+     */
+    { U3S_KOC_ENTRY, 8, U3S_MV_IMPACT, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0 }, /* target combo s.HP */
     { U3S_KOC_SUPER, 44, U3S_MV_DAMAGE_PERMILLE, 0, 850, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* SA III, light */
     { U3S_KOC_SUPER, 45, U3S_MV_DAMAGE_PERMILLE, 0, 850, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* SA III, medium */
     { U3S_KOC_SUPER, 46, U3S_MV_DAMAGE_PERMILLE, 0, 850, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, /* SA III, heavy / EX */

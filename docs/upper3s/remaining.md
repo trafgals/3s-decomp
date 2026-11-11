@@ -3,7 +3,7 @@
 As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
 
 <!-- summary:start -->
-**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 56 verified in a fight test, 2 done but not yet measured, 8 partial, 67 not done, 1 not needed in this version.
+**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 57 verified in a fight test, 2 done but not yet measured, 9 partial, 65 not done, 1 not needed in this version.
 <!-- summary:end -->
 
 ## How to read this
@@ -83,7 +83,7 @@ The post's order. The number after each name is the character index.
 |:--|:--|:--|:--|
 | KN1 | Shippu Jinrai Kyaku (SA III): 2 stocks instead of 3; damage −15%. `super_arts_data[11][2]` 80/3 → 80/2 | table | verified |
 | KN2 | Jab DP (623LP) damage 15 → 11.5. | disc | verified |
-| KN3 | Target combo MP→HP: less knockback on grounded opponents from the 2nd hit, so DPs miss less after it. | disc | — |
+| KN3 | Target combo MP→HP: less knockback on grounded opponents from the 2nd hit, so DPs miss less after it. The post's "slightly" (one or two steps) changes no DP outcome; the smallest knockback step makes the MP/HP DP connect after it, midscreen and in the corner, which is used (impact 19 → 16). | disc | verified |
 | KN4 | Fix the crash when killing Makoto with a neutral throw (may not be present in this version). Not present: each of Ken's throws knocks Makoto out and the fight goes on (`tests/match/test_damage.py`). | find | n/a |
 
 ### Yun (3)
@@ -149,7 +149,7 @@ The post's order. The number after each name is the character index.
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| RY1 | 6MP: less knockback on hit, so links after it are reliable. | disc | — |
+| RY1 | 6MP: less knockback on hit, so links after it are reliable. | disc | partial (the knockback is one step less: Ken leaves hitstun 101 apart instead of 113; but 6MP is +1 on hit and no normal or super of Ryu's links after it in this version, with this knockback or the smallest one, so the "links" part cannot be shown) |
 | RY2 | Target combo far s.HP→s.HK: more forward movement on the 2nd hit. | disc | — |
 | RY3 | More hitstun on far s.MK, s.HK, close s.HP, c.HP, c.LK and c.MK, so none is negative on hit. | disc | verified |
 | RY4 | LK Joudan Sokutou Geri (41236LK): hitbox extends down so it connects after close s.HP / c.HP on everyone. | disc | — |

@@ -43,6 +43,7 @@
 #include "structs.h"
 #if defined(UPPER_3S)
 #include "sf33rd/Source/Game/upper3s_chain.h"
+#include "sf33rd/Source/Game/upper3s_box.h"
 #endif
 
 #include <ctype.h>
@@ -350,12 +351,28 @@ void harness_begin_frame(unsigned long frame) {
         if (G_No[1] == 5 && Allow_a_battle_f && My_char[0] == cfg_char[0] && My_char[1] == cfg_char[1]) {
             fight_started = 1;
 #if defined(UPPER_3S)
+            // SF33_DUMP_BOX=kind,index: print player 1's box set (upper3s_box.h kinds).
+            if (getenv("SF33_DUMP_BOX") != NULL) {
+                int kind = 0;
+                int index = 0;
+
+                if (sscanf(getenv("SF33_DUMP_BOX"), "%d,%d", &kind, &index) == 2) {
+                    for (s16 b = 0; b < 4; b++) {
+                        s16* box = upper3s_box_ptr(&plw[0].wu, (s16)kind, (s16)index, b);
+
+                        if (box != NULL) {
+                            printf("box kind %d index %d box %d: %d %d %d %d\n", kind, index, b, box[0], box[1], box[2], box[3]);
+                        }
+                    }
+                }
+            }
+
             // SF33_LIST_ATTACKS=koc: print the attack entries of every move of player 1's
             // slot koc (4 normals, 5 specials and supers), as the override layer sees them.
             if (getenv("SF33_LIST_ATTACKS") != NULL) {
                 s16 koc = (s16)atoi(getenv("SF33_LIST_ATTACKS"));
 
-                for (s16 ix = 0; ix < 128; ix++) {
+                for (s16 ix = 0; ix < 256; ix++) {
                     Upper3sChain chain;
                     s16 entries[U3S_CHAIN_MAX_ATTACKS];
                     Upper3sChainInfo info;
@@ -392,7 +409,8 @@ void harness_begin_frame(unsigned long frame) {
                     printf("attacks koc %d cix %d base %d startup %d recovery %d entries", koc, ix, chain.base,
                            info.startup, info.recovery);
                     for (s32 k = 0; k < n; k++) {
-                        printf(" %d(hs_you %d)", entries[k], plw[0].wu.att_ix_table[entries[k]].hs_you);
+                        printf(" %d(hs_you %d hs_me %d impact %d)", entries[k], plw[0].wu.att_ix_table[entries[k]].hs_you,
+                               plw[0].wu.att_ix_table[entries[k]].hs_me, plw[0].wu.att_ix_table[entries[k]].impact);
                     }
                     n = upper3s_chain_block_attacks(&chain, entries, U3S_CHAIN_MAX_ATTACKS);
                     printf(" | all blocks");
@@ -446,7 +464,8 @@ static int hurtboxes(const WORK* w) {
 // "hb" is hurtboxes() and "mu" zettai_muteki_flag: a player with the flag is not put into the hit queue
 // (PLCNT.c), so it can be hit only on a frame with hb > 0 and mu 0. "sas" is sa_stop_flag: 2 while the
 // character is frozen by the opponent's superflash (PLS01.c:sa_stop_check()). "meo" is cg_meoshi, the
-// frame's target combo route (PLS03.c:check_meoshi_cancel()), "swn" the command buffer's sw_new, "cab" the frame's catch box (cg_ja.caix). "par" is the forward ground parry slot of the command buffer: its waza_flag[3] (the window: the parry is
+// frame's target combo route (PLS03.c:check_meoshi_cancel()), "swn" the command buffer's sw_new, "cab" the frame's catch box (cg_ja.caix), "bx" its body, attack, hosei and hand box sets (boix, atix,
+// hoix, bhix + haix; upper3s_box.h). "par" is the forward ground parry slot of the command buffer: its waza_flag[3] (the window: the parry is
 // active while it is not 0) and its waza_work[id][3] w_type, shot_ok and free3 (the cooldown: the slot takes
 // no new tap while shot_ok >= 2 and w_type is 11, see CMD_MAIN.c:check_10()). "uk" is ukemi_success, set
 // when the down tap that techs a landing was in time.
@@ -458,7 +477,7 @@ static void log_player(const PLW* p) {
             "\"aix\":%d,\"can\":%d,\"pat\":%d,\"waza\":%d,\"hst\":%d,\"dst\":%d,\"vit\":%d,\"dmv\":%d,\"anum\":%d,"
             "\"pow\":%d,\"piyo\":%d,\"hsme\":%d,\"hsyou\":%d,\"guard\":%d,\"stun\":%d,\"stunmax\":%d,"
             "\"stunned\":%d,\"gauge\":%d,\"stock\":%d,\"stockmax\":%d,\"glen\":%d,\"in\":%d,\"char\":%d,"
-            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d,\"par\":[%d,%d,%d,%d],\"uk\":%d,\"hb\":%d,\"mu\":%d,\"sas\":%d,\"meo\":%d,\"swn\":%d,\"cab\":%d}",
+            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d,\"par\":[%d,%d,%d,%d],\"uk\":%d,\"hb\":%d,\"mu\":%d,\"sas\":%d,\"meo\":%d,\"swn\":%d,\"cab\":%d,\"bx\":[%d,%d,%d,%d]}",
             w->xyz[0].disp.pos, w->xyz[1].disp.pos, w->rl_flag, w->routine_no[0], w->routine_no[1],
             w->routine_no[2], w->routine_no[3], w->now_koc, w->char_index, w->cg_type, w->cg_hit_ix, w->cg_att_ix,
             w->cg_cancel, w->pat_status, w->kind_of_waza, w->hit_stop, w->dm_stop, w->vital_new, w->dm_vital,
@@ -470,7 +489,8 @@ static void log_player(const PLW* p) {
             p->sa ? p->sa->gauge.i : -1, w->renew_attack < 0 ? -w->renew_attack : w->renew_attack,
             p->cp ? p->cp->waza_flag[3] : -1, waza_work[w->id & 1][3].w_type, waza_work[w->id & 1][3].shot_ok,
             waza_work[w->id & 1][3].free3, p->ukemi_success, hurtboxes(w),
-            p->zettai_muteki_flag, p->sa_stop_flag, w->cg_meoshi, p->cp ? p->cp->sw_new : -1, w->cg_ja.caix);
+            p->zettai_muteki_flag, p->sa_stop_flag, w->cg_meoshi, p->cp ? p->cp->sw_new : -1, w->cg_ja.caix, w->cg_ja.boix,
+            w->cg_ja.atix, w->cg_ja.hoix, w->cg_ja.bhix + w->cg_ja.haix);
 }
 
 void harness_end_frame(unsigned long frame) {

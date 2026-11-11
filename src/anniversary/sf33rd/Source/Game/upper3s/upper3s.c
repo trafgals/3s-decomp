@@ -1,5 +1,6 @@
 #include "common.h"
 #include "sf33rd/Source/Game/upper3s.h"
+#include "sf33rd/Source/Game/upper3s_box.h"
 #include "sf33rd/Source/Game/upper3s_chain.h"
 
 #include "sf33rd/Source/Game/PLCNT.h"
@@ -289,6 +290,9 @@ void upper3s_apply_character(PLW* wk) {
     for (i = 0; moves[i].flags != 0; i++) {
         upper3s_apply_move(&wk->wu, &moves[i]);
     }
+
+    /* The box changes (upper3s/upper3s_boxes.c). */
+    upper3s_apply_boxes(wk, upper3s_boxes);
 }
 
 void upper3s_apply_super_art(const Upper3sSuperArt* sa, SA_DATA* out) {

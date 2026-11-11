@@ -78,6 +78,14 @@ const Upper3sSuperArt upper3s_super_art_ryu[4] = {
  */
 
 const Upper3sMove upper3s_moves_ryu[] = {
+    /*
+     * RY1 - "Decrease opponent knockback from F+Strong (6MP) on hit, to make links after it more
+     * reliable." 6MP is normal animation 5; its second hit loads attack entry 51, knockback impact 18
+     * (step 2 of its family in bin2obj/etc.c:_select_hit_dsd). One step less: 17. Measured: it is +1
+     * on hit, and no normal or super art of Ryu's links after it in this version, with this knockback
+     * or the smallest one, so only the knockback itself is checked (tests/match/test_hitstun.py).
+     */
+    { U3S_KOC_ENTRY, 51, U3S_MV_IMPACT, 0, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0 }, /* 6MP, second hit */
     /* Hitstun so the move is not negative on hit: the hold of the defender (hs_you) that makes
      * it 0 on hit, measured in the real engine (tests/match/test_hitstun.py). */
     { U3S_KOC_NORMAL, 13, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -13, 0, 0, 0, 0, 0 }, /* far s.MK (vanilla -4 on hit) */
