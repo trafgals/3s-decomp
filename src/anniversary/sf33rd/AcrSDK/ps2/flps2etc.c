@@ -21,9 +21,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#if !defined(TARGET_PS2) && !defined(_WIN32)
+#if !defined(TARGET_PS2) && !defined(_WIN32) && !defined(__EMSCRIPTEN__)
 #include <ctype.h>
 
+// Emscripten provides its own strupr(), so the shim is only needed on hosts
+// that do not.
 s8* strupr(s8* s) {
     s8* p = s;
 

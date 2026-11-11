@@ -12,6 +12,12 @@
 #include "sf33rd/Source/Game/workuser.h"
 #include "structs.h"
 
+#include "port/sdk_threads.h"
+
+#if !defined(TARGET_PS2)
+#include "port/port_trace.h"
+#endif
+
 #include <cri_mw.h>
 #include <libcdvd.h>
 #include <libgraph.h>
@@ -41,7 +47,13 @@ PS2CDReadMode ps2CdReadMode;
 s16 plt_req[2]; // size: 0x4, address: 0x579084
 u8 ldreq_break;
 struct _adx_fs* adxf = NULL;
+
+#if defined(TARGET_PS2)
 u8 sf3ptinfo[3352];
+#else
+u8 sf3ptinfo[3352 + 12];
+#endif
+
 REQ q_ldreq[16];      // size: 0x280, address: 0x5E1DD0
 u8 ldreq_result[294]; // size: 0x126, address: 0x5E1CA0
 
@@ -68,6 +80,9 @@ s32 Setup_Directory_Record_Data() {
     DskDrvErrRetry = 0;
 
     ADXF_LoadPartitionNw(0, "SF33RD.AFS", NULL, sf3ptinfo);
+#if !defined(TARGET_PS2)
+    PORT_TRACE("afs: partition load started");
+#endif
 
     while (1) {
         if (ADXF_GetPtStat(0) == ADXF_STAT_READEND) {
@@ -93,6 +108,9 @@ s32 Setup_Directory_Record_Data() {
     ps2CdReadMode.spindlctrl = 1;
     ps2CdReadMode.datapattern = 0;
     ps2CdReadMode.pad = 0;
+#if !defined(TARGET_PS2)
+    PORT_TRACE("afs: partition is ready");
+#endif
     return 1;
 }
 
@@ -377,6 +395,49 @@ void Push_LDREQ_Queue_Player(s16 id, s16 ix) {
         Push_LDREQ_Queue(&ldreq);
     }
 }
+
+#if defined(UPPER3S_DUMP)
+/*
+ * Asks the loader for the data of one character.
+ *
+ * Only the texture group of the character is asked for: the other data of a
+ * character is shared with the other characters, and the loader reads it
+ * only once - a second request for it is a fatal error.
+ */
+void Push_LDREQ_Queue_Char(s16 char_index, s16 id) {
+    REQ ldreq;
+    s16 i = ldreq_ix[char_index][0];
+
+    ldreq.type = ldreq_tbl[i].type;
+    ldreq.id = id;
+    ldreq.ix = ldreq_tbl[i].ix;
+    ldreq.frre = ldreq_tbl[i].frre;
+    ldreq.key = 0;
+    ldreq.group = 0;
+    ldreq.result = &ldreq_result[i];
+    ldreq.kokey = lpt_seldat[id];
+
+    Push_LDREQ_Queue(&ldreq);
+}
+#endif
+
+#if defined(UPPER3S_DUMP)
+/*
+ * The number of free slots in the request queue of the loader. Used by the
+ * disc dump, which has to know when there is room for another request.
+ */
+s16 ldreq_queue_space(void) {
+    s16 i;
+
+    for (i = 0; i < (s16)(sizeof(q_ldreq) / sizeof(REQ)); i++) {
+        if (q_ldreq[i].be == 0) {
+            break;
+        }
+    }
+
+    return (s16)(sizeof(q_ldreq) / sizeof(REQ)) - i;
+}
+#endif
 
 void Push_LDREQ_Queue_BG(s16 ix) {
 #if defined(TARGET_PS2)

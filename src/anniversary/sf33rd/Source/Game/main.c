@@ -32,6 +32,20 @@
 #include "sf33rd/Source/PS2/ps2Quad.h"
 #include "structs.h"
 
+#if defined(UPPER3S_DUMP)
+#include "sf33rd/Source/Game/upper3s.h"
+#endif
+
+#if !defined(TARGET_PS2)
+#include "port/port_trace.h"
+#include "port/sdl/sdl_app.h"
+#if defined(_WIN32)
+#include <windef.h> // including windows.h causes conflicts with the Polygon struct, so I just included the header where AllocConsole is and the Windows-specific typedefs that it requires.
+#include <ConsoleApi.h>
+#include <stdio.h>
+#endif
+#endif
+
 #include <memory.h>
 
 // sbss
@@ -54,20 +68,87 @@ void AcrMain() {
     u16 sw_buff;
     u32 sysinfodisp;
 
+#if !defined(TARGET_PS2)
+    int is_running = 1;
+
+#if defined(_WIN32)
+    // attaches to an existing console for printouts. Works with windows CMD but not MSYS2
+    if (AttachConsole(ATTACH_PARENT_PROCESS) == 0) {
+        // if fails, then allocate a new console
+        AllocConsole();
+    }
+    freopen("CONIN$", "r", stdin);
+    freopen("CONOUT$", "w", stdout);
+    freopen("CONOUT$", "w", stderr);
+#endif
+
+    SDLApp_Init();
+    PORT_TRACE("AcrMain: after SDLApp_Init");
+#endif
+
     flInitialize(flPs2State.DispWidth, flPs2State.DispHeight);
     flSetRenderState(FLRENDER_BACKCOLOR, 0);
     flSetDebugMode(0);
     system_init_level = 0;
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: ppgWorkInitializeApprication");
+#endif
     ppgWorkInitializeApprication();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: distributeScratchPadAddress");
+#endif
     distributeScratchPadAddress();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: njdp2d_init");
+#endif
     njdp2d_init();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: njUserInit");
+#endif
     njUserInit();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: palCreateGhost");
+#endif
     palCreateGhost();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: ppgMakeConvTableTexDC");
+#endif
     ppgMakeConvTableTexDC();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: appSetupBasePriority");
+#endif
     appSetupBasePriority();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: MemcardInit");
+#endif
     MemcardInit();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("AcrMain: after game init");
+#endif
 
+#if defined(TARGET_PS2)
     while (1) {
+#else
+    int frame_count = 0;
+
+    while (is_running) {
+        is_running = SDLApp_PollEvents();
+        SDLApp_BeginFrame();
+        frame_count += 1;
+        // The browser build sends every marker to the dev server with a
+        // synchronous request, so the frame counter is reported once a second
+        // instead of on every frame.
+        if ((frame_count % 60) == 0) {
+            PORT_TRACE("AcrMain: frame %d", frame_count);
+        }
+#endif
+
+#if defined(UPPER3S_DUMP)
+        // Dumps the character data of the disc, so that the balance changes can
+        // be derived from the retail values.
+        upper3s_dump_pump();
+#endif
+
         initRenderState(0);
         mpp_w.ds_h[0] = mpp_w.ds_h[1];
         mpp_w.ds_v[0] = mpp_w.ds_v[1];
@@ -215,12 +296,28 @@ void AcrMain() {
         Irl_Scrn();
         BGM_Server();
     }
+
+#if !defined(TARGET_PS2)
+    SDLApp_Quit();
+#endif
 }
 
+#if !defined(TARGET_PS2)
+u8 dctex_linear_mem[0x800];
+u8 texcash_melt_buffer_mem[0x1000];
+u8 tpu_free_mem[0x2000];
+#endif
+
 void distributeScratchPadAddress() {
+#if defined(TARGET_PS2)
     dctex_linear = (s16*)(SPR + 0x800);
     texcash_melt_buffer = (u8*)(SPR + 0x1000);
     tpu_free = (TexturePoolUsed*)(SPR + 0x2000);
+#else
+    dctex_linear = (s16*)dctex_linear_mem;
+    texcash_melt_buffer = (u8*)texcash_melt_buffer_mem;
+    tpu_free = (TexturePoolUsed*)tpu_free_mem;
+#endif
 }
 
 void MaskScreenEdge() {
@@ -282,6 +379,9 @@ void njUserInit() {
     s32 i;
     u32 size;
 
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: njUserInit entered");
+#endif
     sysFF = 1;
     mpp_w.sysStop = 0;
     mpp_w.inGame = 0;
@@ -343,8 +443,22 @@ void njUserInit() {
 
     Init_sound_system();
     Init_bgm_work();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: before Setup_Directory_Record_Data");
+#endif
     Setup_Directory_Record_Data();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: after Setup_Directory_Record_Data");
+#endif
     sndInitialLoad();
+#if !defined(TARGET_PS2)
+    PORT_TRACE("init: after sndInitialLoad");
+#endif
+#if defined(UPPER3S_DUMP)
+    // Dumps the character data of the disc, so that the balance changes can
+    // be derived from the retail values.
+    upper3s_dump_start();
+#endif
     cpInitTask();
     cpReadyTask(INIT_TASK_NUM, Init_Task);
 }

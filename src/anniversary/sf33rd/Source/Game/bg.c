@@ -193,7 +193,11 @@ void Bg_Kakikae_Set() {
 
 void Ed_Kakikae_Set(s16 type) {
     u8 i;
+#if defined(TARGET_PS2)
     const u32* rwtbl_ptr;
+#else
+    const edrw_data_tbl_elem* rwtbl_ptr;
+#endif
     s8 rw;
 
     rw_num = 0;
@@ -205,18 +209,30 @@ void Ed_Kakikae_Set(s16 type) {
     switch (type) {
     case 14:
         for (i = 0; i < 20; i++) {
+#if defined(TARGET_PS2)
             rwtbl_ptr = &gedrw_data_tbl[i][0];
             rw_dat[i].rwgbix = *rwtbl_ptr++;
             rw_dat[i].rwd_ptr = rw_dat[i].brw_ptr = (s16*)rwtbl_ptr[0];
+#else
+            rwtbl_ptr = &gedrw_data_tbl[i];
+            rw_dat[i].rwgbix = rwtbl_ptr->rwgbix;
+            rw_dat[i].rwd_ptr = rw_dat[i].brw_ptr = rwtbl_ptr->rw_ptr;
+#endif
         }
 
         break;
 
     case 15:
         for (i = 0; i < 16; i++) {
+#if defined(TARGET_PS2)
             rwtbl_ptr = &cedrw_data_tbl[i][0];
             rw_dat[i].rwgbix = *rwtbl_ptr++;
             rw_dat[i].rwd_ptr = rw_dat[i].brw_ptr = (s16*)rwtbl_ptr[0];
+#else
+            rwtbl_ptr = &cedrw_data_tbl[i];
+            rw_dat[i].rwgbix = rwtbl_ptr->rwgbix;
+            rw_dat[i].rwd_ptr = rw_dat[i].brw_ptr = rwtbl_ptr->rw_ptr;
+#endif
         }
 
         break;
@@ -227,11 +243,19 @@ void Ed_Kakikae_Set(s16 type) {
 
             for (i = 0; i < edrw_num[type][1]; i++) {
                 rw_num += 1;
+#if defined(TARGET_PS2)
                 rwtbl_ptr = &edrw_data_tbl[rw + i][0];
                 rw_dat[i].bg_num = *rwtbl_ptr++;
                 rw_bg_flag[rw_dat[i].bg_num] = 1;
                 rw_dat[i].rwgbix = *rwtbl_ptr++;
                 rw_dat[i].rwd_ptr = rw_dat[i].brw_ptr = (s16*)rwtbl_ptr[0];
+#else
+                rwtbl_ptr = &edrw_data_tbl[rw + i];
+                rw_dat[i].bg_num = rwtbl_ptr->bg_num;
+                rw_bg_flag[rw_dat[i].bg_num] = 1;
+                rw_dat[i].rwgbix = rwtbl_ptr->rwgbix;
+                rw_dat[i].rwd_ptr = rw_dat[i].brw_ptr = rwtbl_ptr->rw_ptr;
+#endif
                 rw_dat[i].rw_cnt = *rw_dat[i].rwd_ptr++;
                 rw_dat[i].gbix = *rw_dat[i].rwd_ptr++;
             }
