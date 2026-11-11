@@ -3,7 +3,7 @@
 As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
 
 <!-- summary:start -->
-**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 28 verified in a fight test, 18 done but not yet measured, 8 partial, 80 not done.
+**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 39 verified in a fight test, 7 done but not yet measured, 8 partial, 80 not done.
 <!-- summary:end -->
 
 ## How to read this
@@ -42,9 +42,9 @@ As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://m
 
 | # | Item | Kind | Where | Branch |
 |:--|:--|:--|:--|:--|
-| SM1 | Each successive whiffed normal halves the whiff meter gain (100%, 50%, 25%, 12.5%…); whiffed specials unchanged. The scaling resets when a move touches the opponent (hit/block/parry), or when you are hit, block or parry. Blocked projectiles reset nothing, projectiles that hit reset it, and parried projectiles reset it for the thrower only. | logic | `PLS02.c:add_sp_arts_gauge_init()` (the whiff gain); resets at the hit/block/parry gain functions | done |
-| SM2 | +2f on the parry cooldown. Being hit during the cooldown by an attack parried the same way deals 25% extra damage (the crouching damage bonus). No bonus when thrown during the cooldown. Successful parries unchanged. | logic | `CMD_MAIN.c` parry input; `HITCHECK.c:defense_ground()`/`defense_sky()`; `Pow_Pow.c` | done |
-| SM3 | "Guess parries" (input during a wakeup, a recovery roll or an air land-on-feet hitstun) are active half as long, with the same cooldown. A throw during that window or cooldown can't be teched. Parries during throw-tech animations unchanged. | logic | `HITCHECK.c`; `PLPCA.c:check_nagenuke()` | done |
+| SM1 | Each successive whiffed normal halves the whiff meter gain (100%, 50%, 25%, 12.5%…); whiffed specials unchanged. The scaling resets when a move touches the opponent (hit/block/parry), or when you are hit, block or parry. Blocked projectiles reset nothing, projectiles that hit reset it, and parried projectiles reset it for the thrower only. | logic | `PLS02.c:add_sp_arts_gauge_init()` (the whiff gain); resets at the hit/block/parry gain functions | verified |
+| SM2 | +2f on the parry cooldown. Being hit during the cooldown by an attack parried the same way deals 25% extra damage (the crouching damage bonus). No bonus when thrown during the cooldown. Successful parries unchanged. | logic | `CMD_MAIN.c` parry input; `HITCHECK.c:defense_ground()`/`defense_sky()`; `Pow_Pow.c` | verified |
+| SM3 | "Guess parries" (input during a wakeup, a recovery roll or an air land-on-feet hitstun) are active half as long, with the same cooldown. A throw during that window or cooldown can't be teched. Parries during throw-tech animations unchanged. | logic | `HITCHECK.c`; `PLPCA.c:check_nagenuke()` | verified |
 | SM4 | Charge partitioning: as soon as a charged direction (4 or 2) reaches 1/3 charge, the partition timer resets to maximum. | logic | `CMD_MAIN.c` charge (`check_1()`/`check_2()`, `waza_work[][].w_int`) | done |
 | SM5 | Left-right unblockables stay. A hit on a character in block animation who faces the other way scales that hit and its follow-up combo to 50%. | logic | `HITCHECK.c`; `Pow_Pow.c:cal_damage_vitality()` | done |
 
@@ -54,7 +54,7 @@ As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://m
 |:--|:--|:--|:--|:--|
 | B1 | Successful throws are invincible for the whole animation (fixes the Remy/Urien glitch and the Q throw bug). | logic | `HITCHECK.c:catch_hit_check()`/`set_caught_status()`; `PLPCU.c` | done |
 | B2 | Characters can move during the opponent's superflash if they touch a projectile on the frame it starts. | logic | `PLS01.c:sa_stop_check()`; `HITCHECK.c` | done |
-| B3 | Universal overheads (MP+MK) and taunts (HP+HK) work while holding away or towards (today only throws do). | logic | `PLS03.c:check_leap_attack()`, `check_chouhatsu()` | done |
+| B3 | Universal overheads (MP+MK) and taunts (HP+HK) work while holding away or towards (today only throws do). | logic | `PLS03.c:check_leap_attack()`, `check_chouhatsu()` | verified |
 | B4 | Some characters (Makoto, etc.) can attack immediately after teching an air throw. | logic | `PLS00.c:nm_49000()`; `PLPCA.c:check_nagenuke()` | done |
 | B5 | Rare move-interaction soft locks: X.F.L.A.T. vs EX Yagyou Dama / Aegis Reflector / Tengu Stone; Critical Combo Attack / Deadly Double Combination vs Magnetic Storm. (OTG on Dudley/Hugo after some throws is to stay.) | find | — | — |
 | B6 | Wishlist: half-circle motions (41236, 63214) become quarter-circles, on the same button unless another special overlaps. Akuma's red fireball may stay. | table | `cmd_data.c` command tables | — |
@@ -203,8 +203,8 @@ The post's order. The number after each name is the character index.
 | AL3 | Air Knee Smash: **all** versions not air-parryable; EX stays ground-parryable. | disc | — |
 | AL4 | Target combo c.LK→c.MK: cancel window longer than 1f. | disc | — |
 | AL5 | Juggles allowed after Flash Chops that hit an airborne opponent. | disc | — |
-| AL6 | c.MP special- and super-cancellable on hit/block/parry. | logic | done |
-| AL7 | c.MK super-cancellable on hit/block/parry, including in the target combo. | logic | done |
+| AL6 | c.MP special- and super-cancellable on hit/block/parry. | logic | verified |
+| AL7 | c.MK super-cancellable on hit/block/parry, including in the target combo. | logic | verified |
 | AL8 | Air Stampede ([2]8K) knocks down when it hits a limb hurtbox. | disc | — |
 | AL9 | Air knockdown animation: fix the anchor point and pushbox so juggles work on him. | disc | — |
 | AL10 | j.2HP: hitboxes on his arms, not his chest. | disc | — |
@@ -224,8 +224,8 @@ The post's order. The number after each name is the character index.
 
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
-| Q1 | c.LP, s.LK and c.LK special- and super-cancellable on hit/block/parry. | logic | done |
-| Q2 | c.MK super-cancellable on hit/block/parry. | logic | done |
+| Q1 | c.LP, s.LK and c.LK special- and super-cancellable on hit/block/parry. | logic | verified |
+| Q2 | c.MK super-cancellable on hit/block/parry. | logic | verified |
 | Q3 | All overhead/low rush punches ([4]6P/K, [P]) super-cancellable on hit/block/parry. | logic | — |
 | Q4 | Far s.LP startup 6f → 4f. | disc | verified |
 | Q5 | 4HK: cancel window extends past the first active frame. | disc | — |
@@ -261,11 +261,11 @@ The post's order. The number after each name is the character index.
 | TW2 | More hitstun on s.MP, far s.MP, s.HP, c.HP, s.LK, s.MK, s.HK, c.MK and 4MK, so none is negative on hit. | disc | verified |
 | TW3 | c.MP and s.MK parryable high only; c.HP and 4MK parryable low only. | disc | — |
 | TW4 | 4MK: activate the earlier low hitboxes that exist but can't connect. | disc | — |
-| TW5 | Far s.MP, s.MP and c.MP special- and super-cancellable on hit/block/parry. | logic | done |
+| TW5 | Far s.MP, s.MP and c.MP special- and super-cancellable on hit/block/parry. | logic | verified |
 | TW6 | c.MP superjump-cancellable on hit/block, like s.MK. | logic | — |
-| TW7 | c.MK super-cancellable on hit/block/parry. | logic | done |
+| TW7 | c.MK super-cancellable on hit/block/parry. | logic | verified |
 | TW8 | Jab A.X.E. (214LP): more hit and block advantage, at most −1/−2 on block. | disc | — |
-| TW9 | All air normals special-cancellable on hit/block into A.X.E. (j.214P) or D.R.A. (j.214K), and super-cancellable into X.F.L.A.T. | logic | done |
+| TW9 | All air normals special-cancellable on hit/block into A.X.E. (j.214P) or D.R.A. (j.214K), and super-cancellable into X.F.L.A.T. | logic | verified |
 | TW10 | X.N.D.L.: drags juggled opponents down so more hits connect. | disc | — |
 | TW11 | X.F.L.A.T. (SA II): remove the low-damage air-to-air version (always full damage); 2 stocks. `super_arts_data[18][1]` 112/1 → 112/2 | table + disc | partial (2 stocks verified) |
 | TW12 | X.C.O.P.Y. (SA III): EX moves (maybe even the opponent's super) by spending chunks of the super's timer; startup 12f → 1f; when hit in its recovery he takes 66% damage instead of extra damage. | new + disc | — (startup in progress; its chain loops) |
@@ -307,8 +307,12 @@ No changes in the post.
 9. **Abare Tosanami's stun rows were on the wrong animations.** They named animations 44 and 45, which have no attack frames, and missed 47, where three of its four hits land; only the first hit was halved. Fixed (MK1: 22 → 9 stun). The super only connects from near a wall, which the test sets up.
 10. **Ibuki's health came from a misread column.** PR #1 read a column of `Com_Vital_Unit_Data` where Ibuki looks like the healthiest character; humans read column 2, where she has 950 and Twelve 997, and scaled Necro's row (950 → 951). Fixed: she takes Twelve's retail row (IB1: 950 → 997).
 
+11. **SM1: a halved whiff gain was rounded down.** A whiffed normal gives a whole number of meter units, so 3 → 1.5 became 1 and 2 → 1 → 0.5 became 0 after the second whiff. Fixed: rounded to the nearest unit (`upper3s_sys.c`). Ryu's whiffed s.HP now gains 3, 2, 1, 0 (`tests/match/test_system.py`).
+12. **SM2 did nothing in a fight, and cut red parries short.** PR #1's cooldown was the two frames after a tap, which are inside the 10-frame parry window, so a missed parry never took the bonus; and the cooldown check sat in the red-parry branch only, where it disabled the first two frames of a red parry. Fixed: the retail game already has a cooldown (the parry slot takes no new tap until its `free3` runs out, 22 frames after the tap, `CMD_MAIN.c:check_10()`); 3s' adds 2 frames to it, and a hit that lands after the window but in that cooldown, of the kind the tap would have parried, takes the crouching bonus (125%; not stacked on a defender who already has a retail bonus). Measured: a second tap counts 24 frames after the first in the retail game, 26 in 3s'; a missed forward tap 13–26 frames before Ryu's s.HP makes it 21 → 26; parries, red parries and throws are unchanged.
+13. **SM3 did not recognise the guess states, and its halved window did not apply.** PR #1 took reaction 88 for the wakeup (it is the frame of an air hit), `my_roll_flag` for the recovery roll (a sprite rotation flag, `MTRANS.c`) and the frame of touching the ground for the air land-on-feet hitstun; and it halved only the red-parry window, which a waking character never uses. Fixed: a knockdown from the first frame lying on the ground (`pat_status` 38) to the end of the damage state, the quick stand (from `ukemi_success`), and air hit reaction 17; a tap made in one has its 10-frame window halved to 5, with the same cooldown, and locks the throw tech until the cooldown is over. Measured on a wakeup after a sweep, a quick stand after a Shoryuken and an air reset by a jab, and on a throw on wakeup.
+
 ### Still open
 
 1. **HU5: check the move.** PR #1 reads the Meat Squasher's startup from the disc as 24/52/67, against the post's 21/31/44; light is close, medium and heavy are far off.
 2. **SN3 and SN9 are partial.** The three Ryuubi Kyaku share one chain, so all three are 19 frames (the spec asks 17/19/21) and the Roundhouse knockdown is not done. EX Dragon Smash is 5 frames (the spec asks 3), because the chain cannot be held shorter.
-3. **Documentation errors.** Issue #2 says `plpat16.c` is Makoto (it is Chun-Li; Makoto is `plpat17.c`, AGENTS.md §3.2). PR #1's `spec-map.md` says the whiff gain is `add_sp_arts_gauge_guard()` (that is the block gain; the code hooks `add_sp_arts_gauge_init()`). Chun-Li's table header calls SA I "Houyoku-sen" (it is Kikoushou). PR #1's table for Q labels entry 1 as "6LP"; in the game it is the far standing Jab.
+3. **Documentation errors.** Issue #2 says `plpat16.c` is Makoto (it is Chun-Li; Makoto is `plpat17.c`, AGENTS.md §3.2). Chun-Li's table header calls SA I "Houyoku-sen" (it is Kikoushou). PR #1's table for Q labels entry 1 as "6LP"; in the game it is the far standing Jab.

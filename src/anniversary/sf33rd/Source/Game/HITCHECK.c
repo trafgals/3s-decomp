@@ -14,6 +14,7 @@
 #include "sf33rd/Source/Game/upper3s.h"
 #include "sf33rd/Source/Game/upper3s_sys.h"
 #include "sf33rd/Source/Game/upper3s_throw.h"
+#include "sf33rd/Source/Game/cmd_data.h"
 #endif
 #include "sf33rd/Source/Game/HITPLPL.h"
 #include "sf33rd/Source/Game/PLCNT.h"
@@ -61,11 +62,11 @@ void hit_check_main_process() {
     aiuchi_flag = 0;
 
 #if defined(UPPER_3S)
-    // Third Strike Upper: the guard levers of the command buffer tell when a
-    // parry was attempted, so they have to be watched before the hit check
-    // of this frame decides whether the attack is parried.
-    upper3s_parry_frame(&plw[0], Game_timer);
-    upper3s_parry_frame(&plw[1], Game_timer);
+    // Third Strike Upper: the parry slots of the command buffer tell which
+    // parries are in their cooldown. The command interpreter of this frame
+    // has run (Player_move), the hit check of this frame has not.
+    upper3s_parry_frame(&plw[0], waza_work[0]);
+    upper3s_parry_frame(&plw[1], waza_work[1]);
 #endif
 
     if (hpq_in > 1) {
@@ -637,14 +638,14 @@ void plef_at_vs_player_damage_union(PLW* as, PLW* ds, s8 gddir) {
     paring_counter[ds->wu.id] = 0;
     paring_bonus_r[ds->wu.id] = 0;
 #if defined(UPPER_3S)
-    // Third Strike Upper: a hit that lands during the cooldown of the parry
-    // that would have parried it does 25% more damage. The damage of the
-    // hit is scaled, the stun of the move is not.
+    // Third Strike Upper: a hit that lands in the cooldown of the parry that
+    // would have parried it takes the crouching damage bonus, 25% (SM2). The
+    // damage of the hit is scaled, the stun of the move is not.
     {
-        s16 permille = upper3s_parry_damage_permille(ds->wu.id, as->wu.att.guard);
+        s16 percent = upper3s_parry_damage_percent(ds, &as->wu);
 
-        if (permille != 1000) {
-            ds->wu.dm_vital = (ds->wu.dm_vital * permille) / 1000;
+        if (percent != 100) {
+            ds->wu.dm_vital = (ds->wu.dm_vital * percent) / 100;
         }
     }
 
@@ -1072,9 +1073,9 @@ void set_damage_and_piyo(PLW* as, PLW* ds) {
 #endif
     ds->wu.dm_piyo = ds->wu.dm_piyo * stun_gauge_omake[omop_stun_gauge_add[(ds->wu.id + 1) & 1]] / 32;
 
-    // +25% damage when the defender's pat_status is 32, 3 or 25. The source does not name these states.
-    // 25% is the size of the "crouching damage bonus" that the 3s' spec's parry change (SM2) reuses, so
-    // this may be it; unconfirmed.
+    // +25% damage when the defender's pat_status is 32, 3 or 25: the crouching damage bonus that the 3s'
+    // spec's parry change (SM2) reuses. 32 is crouching (measured: Ken's c.MK takes 13 from a standing Ryu,
+    // 17 from a crouching one); 3 and 25 are not named in the source.
     if ((ds->wu.pat_status == 32 || ds->wu.pat_status == 3) || ds->wu.pat_status == 25) {
         ds->wu.dm_vital = (ds->wu.dm_vital * 125) / 100;
     } else if (ds->wu.pat_status == 7 || ds->wu.pat_status == 23 || ds->wu.pat_status == 35) {
@@ -1191,19 +1192,8 @@ s32 defense_sky(PLW* as, PLW* ds, s8 gddir) {
     }
 
     if (ds->py->flag == 0 && !(ds->guard_flag & 2) && as->wu.att.guard & 4) {
-#if defined(UPPER_3S)
-        if (just_now && !upper3s_parry_cooling(ds->wu.id, U3S_PARRY_AIR)) {
-#else
         if (just_now) {
-#endif
-#if defined(UPPER_3S)
-            s16 threshold = upper3s_parry_threshold(ds, U3S_PARRY_AIR, grdb2[ds->wu.id][attr_att]);
-#endif
-#if defined(UPPER_3S)
-            if (!(ds->spmv_ng_flag & 0x1000) && (ds->cp->waza_flag[5] >= threshold || abs)) {
-#else
             if (!(ds->spmv_ng_flag & 0x1000) && (ds->cp->waza_flag[5] >= grdb2[ds->wu.id][attr_att] || abs)) {
-#endif
                 blocking_point_count_up(ds);
                 as->wu.hf.hit.player = 0x80;
                 ds->wu.routine_no[2] = 0x22;
@@ -1302,20 +1292,8 @@ s32 defense_ground(PLW* as, PLW* ds, s8 gddir) {
 
     if (ds->py->flag == 0 && !(ds->guard_flag & 2) && as->wu.att.guard & 3) {
         if (as->wu.att.guard & 2) {
-#if defined(UPPER_3S)
-            if (just_now && !upper3s_parry_cooling(ds->wu.id, U3S_PARRY_HIGH)) {
-#else
             if (just_now) {
-#endif
-#if defined(UPPER_3S)
-                s16 threshold = upper3s_parry_threshold(ds, U3S_PARRY_HIGH, grdb[ds->wu.id][attr_att][0]);
-#endif
-#if defined(UPPER_3S)
-                if (!(ds->spmv_ng_flag & 0x1000) &&
-                    ((ds->cp->waza_flag[3] >= threshold) || abs)) {
-#else
                 if (!(ds->spmv_ng_flag & 0x1000) && ((ds->cp->waza_flag[3] >= grdb[ds->wu.id][attr_att][0]) || abs)) {
-#endif
                     blocking_point_count_up(ds);
                     as->wu.hf.hit.player = 64;
 
@@ -1369,19 +1347,8 @@ s32 defense_ground(PLW* as, PLW* ds, s8 gddir) {
         }
 
         if (as->wu.att.guard & 1) {
-#if defined(UPPER_3S)
-            if (just_now && !upper3s_parry_cooling(ds->wu.id, U3S_PARRY_LOW)) {
-#else
             if (just_now) {
-#endif
-#if defined(UPPER_3S)
-                s16 threshold = upper3s_parry_threshold(ds, U3S_PARRY_LOW, grdb[ds->wu.id][attr_att][1]);
-#endif
-#if defined(UPPER_3S)
-                if (!(ds->spmv_ng_flag & 0x1000) && (!(ds->cp->waza_flag[4] < threshold) || abs)) {
-#else
                 if (!(ds->spmv_ng_flag & 0x1000) && (!(ds->cp->waza_flag[4] < grdb[ds->wu.id][attr_att][1]) || abs)) {
-#endif
                     blocking_point_count_up(ds);
                     as->wu.hf.hit.player = 64;
                     ds->wu.routine_no[2] = 33;

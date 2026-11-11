@@ -9,8 +9,13 @@
  *    superflash of the opponent.
  *  - SM2: the cooldown of a parry and the extra damage of a hit that lands
  *    during it.
- *  - SM3: the guess parries - the halved window and the lock of the throw
- *    tech.
+ *  - SM3: the guess parries - their states, the halved window and the lock
+ *    of the throw tech.
+ *
+ * The parry slots of the command buffer are simulated the way
+ * CMD_MAIN.c:check_10() runs them (see `tap()` and `next_frame()`); the
+ * fight tests (tests/match/test_system.py) check the same rules in the real
+ * engine.
  *
  * Build and run with `make test` from the repository root.
  */
@@ -36,54 +41,74 @@ static void check(int condition, const char* what) {
 }
 
 /*
- * The guard levers of the command buffer of the retail game.
+ * The parry slots of the command buffer of the retail game.
  *
- * `reset[]` is the value the lever is loaded with when the direction is
- * pressed, `waza_flag[]` counts it down once per frame. The red blocking
- * time of a parry of a normal attack is 9, so the parry is active while
- * the lever is at 10 or 9.
+ * A tap loads the slot's `waza_flag[]` with its `reset[]` (11 for a ground
+ * parry) and the interpreter counts it down once per frame, so it is at 10
+ * when the frame of the tap is over: the parry is active for 10 frames. The
+ * slot is in states 2-4 (`shot_ok`) while `free3` counts down from
+ * `reset + 10` (+2 in 3s'), then restarts with `w_type` 0.
  */
 #define GUARD_RESET 11
-#define RED_BLOCKING_TIME 9
-#define RED_BLOCKING_TIME_SPECIAL 8
+#define COOLDOWN_FREE3 (GUARD_RESET + 10 + U3S_PARRY_COOLDOWN)
 
 static WORK_CP command_buffer;
+static WAZA_WORK slots[56];
 
 static void setup_player(PLW* wk, s16 player) {
+    s16 i;
+
     memset(wk, 0, sizeof(PLW));
     memset(&command_buffer, 0, sizeof(WORK_CP));
+    memset(slots, 0, sizeof(slots));
 
     wk->wu.id = player;
     wk->cp = &command_buffer;
-    wk->cp->reset[U3S_PARRY_LEVER_HIGH] = GUARD_RESET;
-    wk->cp->reset[U3S_PARRY_LEVER_LOW] = GUARD_RESET;
-    wk->cp->reset[U3S_PARRY_LEVER_AIR] = GUARD_RESET;
-}
 
-/*
- * The player presses the direction of a parry.
- *
- * The command buffer loads the lever with `reset[]` and counts it down once
- * per frame, so the lever is at `reset - 1` when the frame is over.
- */
-static void press_parry(PLW* wk, s16 kind) {
-    s16 lever;
-
-    switch (kind) {
-    case U3S_PARRY_LOW:
-        lever = U3S_PARRY_LEVER_LOW;
-        break;
-
-    case U3S_PARRY_AIR:
-        lever = U3S_PARRY_LEVER_AIR;
-        break;
-
-    default:
-        lever = U3S_PARRY_LEVER_HIGH;
-        break;
+    for (i = 0; i < 56; i++) {
+        wk->cp->reset[i] = GUARD_RESET;
+        slots[i].w_type = U3S_PARRY_STEP;
+        slots[i].shot_ok = 1; /* waiting for a tap */
     }
 
-    wk->cp->waza_flag[lever] = wk->cp->reset[lever] - 1;
+    upper3s_parry_frame(wk, slots);
+}
+
+/* The player taps the direction of the parry in `slot`; the frame ends. */
+static void tap(PLW* wk, s16 slot) {
+    wk->cp->waza_flag[slot] = wk->cp->reset[slot] - 1;
+    slots[slot].shot_ok = 2;
+    slots[slot].free3 = COOLDOWN_FREE3;
+    upper3s_parry_frame(wk, slots);
+}
+
+/* One frame of the command interpreter, then the hit check's call. */
+static void next_frame(PLW* wk) {
+    s16 i;
+
+    for (i = 0; i < 56; i++) {
+        if (wk->cp->waza_flag[i] > 0) {
+            wk->cp->waza_flag[i]--;
+        }
+
+        if ((slots[i].w_type == U3S_PARRY_STEP) && (slots[i].shot_ok >= 2)) {
+            if (--slots[i].free3 < 0) {
+                slots[i].w_type = 0;
+            }
+        } else if (slots[i].w_type == 0) {
+            /* check_init() starts the slot again. */
+            slots[i].w_type = U3S_PARRY_STEP;
+            slots[i].shot_ok = 1;
+        }
+    }
+
+    upper3s_parry_frame(wk, slots);
+}
+
+static void frames(PLW* wk, s16 n) {
+    while (n-- > 0) {
+        next_frame(wk);
+    }
 }
 
 /*
@@ -150,107 +175,99 @@ static void test_superflash_lock(void) {
  */
 static void test_parry_cooldown(void) {
     PLW wk;
+    s16 n;
 
-    printf("SM2: a parry cannot be attempted again for two frames\n");
+    printf("SM2: the cooldown of a parry is the slot's lockout after the window\n");
 
     setup_player(&wk, 0);
-    upper3s_parry_frame(&wk, 100);
+    check(upper3s_parry_cooling(0, U3S_PARRY_HIGH) == 0, "there is no cooldown without a tap");
 
-    check(upper3s_parry_cooling(0, U3S_PARRY_HIGH) == 0, "there is no cooldown without an attempt");
+    tap(&wk, U3S_PARRY_LEVER_HIGH);
+    check(upper3s_parry_cooling(0, U3S_PARRY_HIGH) == 0, "the frame of the tap is in the window");
 
-    /* The player presses the direction of the parry. */
-    press_parry(&wk, U3S_PARRY_HIGH);
-    upper3s_parry_frame(&wk, 101);
+    frames(&wk, 9);
+    check(wk.cp->waza_flag[U3S_PARRY_LEVER_HIGH] == 1, "the window is 10 frames long");
+    check(upper3s_parry_cooling(0, U3S_PARRY_HIGH) == 0, "the last frame of the window is not the cooldown");
 
-    check(upper3s_parry_cooling(0, U3S_PARRY_HIGH) == 0, "the frame of the attempt is not on cooldown");
+    next_frame(&wk);
+    check(upper3s_parry_cooling(0, U3S_PARRY_HIGH) == 1, "the cooldown starts when the window is over");
+    check(upper3s_parry_cooling(0, U3S_PARRY_LOW) == 0, "the cooldown of a parry is not the other parry's");
 
-    upper3s_parry_frame(&wk, 102);
-    check(upper3s_parry_cooling(0, U3S_PARRY_HIGH) == 1, "the parry is on cooldown one frame after the attempt");
+    /* The slot is locked until free3 goes below 0: 24 frames after the tap
+     * with the +2f of 3s', 22 in the retail game. */
+    for (n = 11; upper3s_parry_cooling(0, U3S_PARRY_HIGH); n++) {
+        next_frame(&wk);
+    }
 
-    upper3s_parry_frame(&wk, 103);
-    check(upper3s_parry_cooling(0, U3S_PARRY_HIGH) == 1, "the parry is on cooldown two frames after the attempt");
-
-    upper3s_parry_frame(&wk, 104);
-    check(upper3s_parry_cooling(0, U3S_PARRY_HIGH) == 0, "the cooldown of the parry is over after two frames");
-
-    /* The cooldown of one parry does not block the other one. */
-    check(upper3s_parry_cooling(0, U3S_PARRY_LOW) == 0, "the cooldown of a parry does not block the other parry");
+    check(n == GUARD_RESET + 10 + U3S_PARRY_COOLDOWN + 2, "the slot takes a new tap 24 frames after the tap");
+    check(U3S_PARRY_COOLDOWN == 2, "3s' adds two frames to the cooldown");
 }
 
 /*
- * SM2 - the extra damage of a hit that lands during the cooldown.
+ * SM2 - the damage of a hit that lands during the cooldown.
  */
 static void test_missed_parry_damage(void) {
-    PLW wk;
+    PLW ds;
+    WORK as;
 
-    printf("SM2: a hit that lands during the cooldown of a parry does 25 percent more damage\n");
+    printf("SM2: a hit in the cooldown of the parry that would have parried it takes the crouching bonus\n");
 
-    setup_player(&wk, 0);
-    upper3s_parry_frame(&wk, 199);
+    memset(&as, 0, sizeof(as));
 
-    /* The player attempts a parry and misses it. */
-    press_parry(&wk, U3S_PARRY_HIGH);
-    upper3s_parry_frame(&wk, 200);
-    upper3s_parry_frame(&wk, 201);
+    setup_player(&ds, 0);
+    tap(&ds, U3S_PARRY_LEVER_HIGH);
 
-    check(upper3s_parry_damage_permille(0, 2) == 1250, "an attack that is parried the same way does 25 percent more damage");
-    check(upper3s_parry_damage_permille(0, 1) == 1000, "an attack that is parried another way does no extra damage");
-    check(upper3s_parry_damage_permille(0, 0) == 1000, "a throw does no extra damage");
-    check(upper3s_parry_damage_permille(0, 4) == 1000, "an attack in the air does no extra damage");
+    as.att.guard = 2;
+    check(upper3s_parry_damage_percent(&ds, &as) == 100, "a hit in the window gets no bonus");
 
-    /* The cooldown is over: the damage is the retail one again. */
-    upper3s_parry_frame(&wk, 204);
-    check(upper3s_parry_damage_permille(0, 2) == 1000, "the damage is the retail one after the cooldown");
+    frames(&ds, 12);
+    check(upper3s_parry_damage_percent(&ds, &as) == 125, "an attack parried forward takes 25 percent more");
 
-    /* The same for the parry of the attacks that have to be blocked low. */
-    setup_player(&wk, 0);
-    upper3s_parry_frame(&wk, 299);
-    press_parry(&wk, U3S_PARRY_LOW);
-    upper3s_parry_frame(&wk, 300);
-    upper3s_parry_frame(&wk, 301);
+    as.att.guard = 1;
+    check(upper3s_parry_damage_percent(&ds, &as) == 100, "an attack parried down takes no bonus");
 
-    check(upper3s_parry_damage_permille(0, 1) == 1250, "an attack that has to be parried down does 25 percent more damage");
-    check(upper3s_parry_damage_permille(0, 2) == 1000, "an attack that is parried another way does no extra damage");
-}
+    as.att.guard = 0;
+    check(upper3s_parry_damage_percent(&ds, &as) == 100, "an attack that cannot be parried takes no bonus");
 
-/*
- * SM3 - the guess parries.
- */
-static void test_guess_parry(void) {
-    PLW wk;
+    as.att.guard = 2;
+    as.jump_att_flag = 1;
+    check(upper3s_parry_damage_percent(&ds, &as) == 100, "a jumping attack is parried with the anti-air slot");
+    as.jump_att_flag = 0;
 
-    printf("SM3: a guess parry is only active for half as long\n");
+    ds.wu.pat_status = 32;
+    check(upper3s_parry_damage_percent(&ds, &as) == 100, "a crouching defender already has the crouching bonus");
+    ds.wu.pat_status = 0;
 
-    setup_player(&wk, 0);
-    upper3s_parry_frame(&wk, 399);
+    ds.wu.xyz[1].disp.pos = 40;
+    check(upper3s_parry_damage_percent(&ds, &as) == 100, "a defender in the air needs the air parry");
+    ds.wu.xyz[1].disp.pos = 0;
 
-    /* The retail window of the parry of a normal attack is two frames: the
-     * lever is loaded with 11, counted down to 10 on the frame of the press,
-     * and the parry is active while it is at 10 or 9. */
-    check(GUARD_RESET - RED_BLOCKING_TIME == 2, "the retail parry window is two frames");
-    check(GUARD_RESET - RED_BLOCKING_TIME_SPECIAL == 3, "the retail parry window of a special move is three frames");
+    frames(&ds, 30);
+    check(upper3s_parry_damage_percent(&ds, &as) == 100, "the damage is the retail one after the cooldown");
 
-    /* A normal parry: the retail window. */
-    press_parry(&wk, U3S_PARRY_HIGH);
-    upper3s_parry_frame(&wk, 400);
+    /* The down parry and the low attacks. */
+    setup_player(&ds, 0);
+    tap(&ds, U3S_PARRY_LEVER_LOW);
+    frames(&ds, 12);
+    as.att.guard = 1;
+    check(upper3s_parry_damage_percent(&ds, &as) == 125, "an attack parried down takes 25 percent more");
 
-    check(upper3s_parry_threshold(&wk, U3S_PARRY_HIGH, RED_BLOCKING_TIME) == RED_BLOCKING_TIME,
-          "the window of a normal parry is the retail one");
+    /* The forward tap loads the ground and the anti-air slots together. */
+    setup_player(&ds, 0);
+    tap(&ds, U3S_PARRY_LEVER_ANTIAIR);
+    frames(&ds, 12);
+    as.att.guard = 2;
+    as.jump_att_flag = 1;
+    check(upper3s_parry_damage_percent(&ds, &as) == 125, "a jumping attack in the anti-air cooldown takes the bonus");
+    as.jump_att_flag = 0;
 
-    /* A guess parry: the window is halved, rounded down. */
-    setup_player(&wk, 0);
-    upper3s_parry_frame(&wk, 499);
-    wk.wu.routine_no[1] = 1;
-    wk.wu.routine_no[2] = 88;
-    press_parry(&wk, U3S_PARRY_HIGH);
-    upper3s_parry_frame(&wk, 500);
-
-    check(upper3s_parry_threshold(&wk, U3S_PARRY_HIGH, RED_BLOCKING_TIME) == GUARD_RESET - 1,
-          "the window of a guess parry is half of the retail one");
-
-    /* The window of a special move is three frames: half of it is one. */
-    check(upper3s_parry_threshold(&wk, U3S_PARRY_HIGH, RED_BLOCKING_TIME_SPECIAL) == GUARD_RESET - 1,
-          "the window of a guess parry of a special move is half of the retail one");
+    /* The air parry. */
+    setup_player(&ds, 0);
+    tap(&ds, U3S_PARRY_LEVER_AIR);
+    frames(&ds, 12);
+    ds.wu.xyz[1].disp.pos = 40;
+    as.att.guard = 4;
+    check(upper3s_parry_damage_percent(&ds, &as) == 125, "an air attack in the air parry's cooldown takes the bonus");
 }
 
 /*
@@ -259,32 +276,87 @@ static void test_guess_parry(void) {
 static void test_guess_parry_states(void) {
     PLW wk;
 
-    printf("SM3: the wakeup, the roll and the landing are guess parry states\n");
+    printf("SM3: the wakeup, the roll and the air land-on-feet hitstun are guess parry states\n");
 
     setup_player(&wk, 0);
+    check(upper3s_parry_is_guess_state(&wk) == 0, "a standing character is not in a guess state");
 
-    check(upper3s_parry_is_guess_state(&wk) == 0, "a character that is not recovering is no guess parry state");
-
-    /* The wakeup animation. */
+    /* An ordinary hitstun (reaction 12 is the standing hitstun as well). */
     wk.wu.routine_no[1] = 1;
-    wk.wu.routine_no[2] = 88;
-    check(upper3s_parry_is_guess_state(&wk) == 1, "the wakeup is a guess parry state");
+    wk.wu.routine_no[2] = 12;
+    next_frame(&wk);
+    check(upper3s_parry_is_guess_state(&wk) == 0, "an ordinary hitstun is not a guess state");
 
-    /* A normal hitstun is not a guess parry state. */
-    wk.wu.routine_no[2] = 5;
-    wk.wu.xyz[1].disp.pos = 0;
-    wk.wu.old_pos[1] = 0;
-    check(upper3s_parry_is_guess_state(&wk) == 0, "a normal hitstun is no guess parry state");
-
-    /* The hitstun of landing on the feet from the air. */
-    wk.wu.old_pos[1] = 100;
-    check(upper3s_parry_is_guess_state(&wk) == 1, "the landing on the feet is a guess parry state");
+    /* A knockdown: lying on the ground, then getting up. */
+    wk.wu.routine_no[2] = 16;
+    wk.wu.pat_status = 38;
+    next_frame(&wk);
+    check(upper3s_parry_is_guess_state(&wk) == 1, "lying on the ground is the wakeup");
+    wk.wu.pat_status = 0;
+    next_frame(&wk);
+    check(upper3s_parry_is_guess_state(&wk) == 1, "getting up is the wakeup");
+    wk.wu.routine_no[1] = 0;
+    wk.wu.routine_no[2] = 36;
+    next_frame(&wk);
+    check(upper3s_parry_is_guess_state(&wk) == 0, "the wakeup ends with the damage state");
 
     /* The recovery roll. */
-    wk.wu.old_pos[1] = 0;
+    wk.wu.routine_no[1] = 1;
+    wk.wu.routine_no[2] = 18;
+    wk.ukemi_success = 1;
+    next_frame(&wk);
+    wk.ukemi_success = 0;
+    wk.wu.routine_no[2] = 3;
+    next_frame(&wk);
+    check(upper3s_parry_is_guess_state(&wk) == 1, "the recovery roll is a guess state");
     wk.wu.routine_no[1] = 0;
-    wk.wu.my_roll_flag = 1;
-    check(upper3s_parry_is_guess_state(&wk) == 1, "the recovery roll is a guess parry state");
+    next_frame(&wk);
+    check(upper3s_parry_is_guess_state(&wk) == 0, "the roll ends with the damage state");
+
+    /* The air hitstun that ends on the feet. */
+    wk.wu.routine_no[1] = 1;
+    wk.wu.routine_no[2] = 17;
+    wk.wu.xyz[1].disp.pos = 30;
+    next_frame(&wk);
+    check(upper3s_parry_is_guess_state(&wk) == 1, "the air land-on-feet hitstun is a guess state");
+    wk.wu.routine_no[1] = 0;
+    wk.wu.routine_no[2] = 23;
+    wk.wu.xyz[1].disp.pos = 0;
+    next_frame(&wk);
+    check(upper3s_parry_is_guess_state(&wk) == 0, "the landing after it is not");
+}
+
+/*
+ * SM3 - the window of a guess parry is halved, its cooldown is not.
+ */
+static void test_guess_parry_window(void) {
+    PLW wk;
+    s16 n;
+
+    printf("SM3: a guess parry is only active for half as long\n");
+
+    setup_player(&wk, 0);
+    tap(&wk, U3S_PARRY_LEVER_HIGH);
+    check(wk.cp->waza_flag[U3S_PARRY_LEVER_HIGH] == GUARD_RESET - 1, "a normal parry keeps the retail window");
+
+    setup_player(&wk, 0);
+    wk.wu.routine_no[1] = 1;
+    wk.wu.pat_status = 38;
+    next_frame(&wk);
+    tap(&wk, U3S_PARRY_LEVER_HIGH);
+    check(wk.cp->waza_flag[U3S_PARRY_LEVER_HIGH] == (GUARD_RESET - 1) / 2, "a guess parry is active for 5 frames");
+
+    for (n = 1; !upper3s_parry_cooling(0, U3S_PARRY_HIGH); n++) {
+        next_frame(&wk);
+    }
+
+    check(n == 6, "the cooldown of a guess parry starts after its 5 frames");
+
+    for (; upper3s_parry_cooling(0, U3S_PARRY_HIGH); n++) {
+        next_frame(&wk);
+    }
+
+    check(n == GUARD_RESET + 10 + U3S_PARRY_COOLDOWN + 2, "a guess parry has the same cooldown");
 }
 
 /*
@@ -294,31 +366,24 @@ static void test_guess_parry_states(void) {
 static void test_guess_parry_throw_lock(void) {
     PLW wk;
 
-    printf("SM3: a throw in the window of a guess parry cannot be teched\n");
+    printf("SM3: a throw in the window or cooldown of a guess parry cannot be teched\n");
 
     setup_player(&wk, 0);
-    upper3s_parry_frame(&wk, 599);
-
-    /* The player is in the wakeup animation and attempts a parry. */
     wk.wu.routine_no[1] = 1;
-    wk.wu.routine_no[2] = 88;
-    press_parry(&wk, U3S_PARRY_HIGH);
-    upper3s_parry_frame(&wk, 600);
-
+    wk.wu.pat_status = 38;
+    next_frame(&wk);
+    tap(&wk, U3S_PARRY_LEVER_HIGH);
     check(upper3s_parry_guess_locked(0) == 1, "the throw cannot be teched in the window of the guess parry");
 
-    upper3s_parry_frame(&wk, 601);
+    frames(&wk, 10);
     check(upper3s_parry_guess_locked(0) == 1, "the throw cannot be teched in the cooldown of the guess parry");
 
-    upper3s_parry_frame(&wk, 603);
-    check(upper3s_parry_guess_locked(0) == 0, "the throw can be teched again after the guess parry");
+    frames(&wk, 20);
+    check(upper3s_parry_guess_locked(0) == 0, "the throw can be teched again after the cooldown");
 
     /* A normal parry does not lock the throw tech. */
     setup_player(&wk, 0);
-    upper3s_parry_frame(&wk, 699);
-    press_parry(&wk, U3S_PARRY_HIGH);
-    upper3s_parry_frame(&wk, 700);
-
+    tap(&wk, U3S_PARRY_LEVER_HIGH);
     check(upper3s_parry_guess_locked(0) == 0, "a normal parry does not lock the throw tech");
 }
 
@@ -327,8 +392,8 @@ int main() {
     test_superflash_lock();
     test_parry_cooldown();
     test_missed_parry_damage();
-    test_guess_parry();
     test_guess_parry_states();
+    test_guess_parry_window();
     test_guess_parry_throw_lock();
 
     printf("\n%d checks, %d failures\n", checks, failures);

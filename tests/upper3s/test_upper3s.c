@@ -432,7 +432,15 @@ static void test_the_whiffed_meter_gain(void) {
     check(upper3s_sys_whiff_start(&wk, 100) == 100, "the first normal keeps its full gain");
     check(upper3s_sys_whiff_start(&wk, 100) == 50, "the second whiffed normal is halved");
     check(upper3s_sys_whiff_start(&wk, 100) == 25, "the third whiffed normal is a quarter");
-    check(upper3s_sys_whiff_start(&wk, 100) == 12, "the fourth whiffed normal is an eighth");
+    check(upper3s_sys_whiff_start(&wk, 100) == 13, "the fourth whiffed normal is an eighth (12.5, rounded)");
+
+    /* The gauge counts whole units and a whiff is worth about 2: rounded, the streak still adds
+     * up to twice one whiff, as 100% + 50% + 25% + ... does. */
+    upper3s_sys_whiff_contact(&wk, &wk, U3S_SYS_CONTACT_HIT);
+    check(upper3s_sys_whiff_start(&wk, 2) == 2, "a 2-unit whiff: 2");
+    check(upper3s_sys_whiff_start(&wk, 2) == 1, "then 1");
+    check(upper3s_sys_whiff_start(&wk, 2) == 1, "then 0.5, rounded to 1");
+    check(upper3s_sys_whiff_start(&wk, 2) == 0, "then 0.25, rounded to 0");
 
     /* A contact resets the counter, so the next normal starts over. */
     upper3s_sys_whiff_contact(&wk, &wk, U3S_SYS_CONTACT_HIT);

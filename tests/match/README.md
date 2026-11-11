@@ -10,6 +10,19 @@ hit advantage, damage, stun and meter, in the vanilla build and in the 3s' build
 - `tools/match/fight.py` writes the script, runs a build and reads back the per-frame
   log; `startup()`, `hit_advantage()`, `damage()` and friends measure it.
 
+The tests:
+
+- `test_harness.py`: the harness itself, the retail numbers the design document quotes, and
+  regressions found by the fights.
+- `test_hitstun.py`: hit advantage of the hitstun items.
+- `test_data.py`: super art stocks and bars, stun bars, health.
+- `test_damage.py`: damage and stun of single moves and supers.
+- `test_cancels.py`: the cancel items, on hit, block and parry.
+- `test_system.py`: the system mechanics (whiff meter, parry cooldown, guess parries) and B3.
+
+A script's frames start after the three frames `fight.run()` spends placing the players, so
+an input on script frame `n` is on frame `n + 3` of the log.
+
 The measurements use the conventions of the design document, and `test_harness.py`
 checks them against the retail numbers the document quotes (Q's standing Roundhouse is
 -10 on hit; Chun-Li's crouching Jab starts in 2 frames; and so on).

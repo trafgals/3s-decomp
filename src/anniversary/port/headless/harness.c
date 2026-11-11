@@ -30,6 +30,7 @@
 #include "port/headless/headless.h"
 #include "common.h"
 #include "sf33rd/Source/Game/PLCNT.h"
+#include "sf33rd/Source/Game/cmd_data.h"
 #include "sf33rd/Source/Game/debug/Debug.h"
 #include "sf33rd/Source/Game/workuser.h"
 #include "structs.h"
@@ -385,6 +386,10 @@ void harness_begin_frame(unsigned long frame) {
     step_left -= 1;
 }
 
+// "par" is the forward ground parry slot of the command buffer: its waza_flag[3] (the window: the parry is
+// active while it is not 0) and its waza_work[id][3] w_type, shot_ok and free3 (the cooldown: the slot takes
+// no new tap while shot_ok >= 2 and w_type is 11, see CMD_MAIN.c:check_10()). "uk" is ukemi_success, set
+// when the down tap that techs a landing was in time.
 static void log_player(const PLW* p) {
     const WORK* w = &p->wu;
 
@@ -393,7 +398,7 @@ static void log_player(const PLW* p) {
             "\"aix\":%d,\"can\":%d,\"pat\":%d,\"waza\":%d,\"hst\":%d,\"dst\":%d,\"vit\":%d,\"dmv\":%d,\"anum\":%d,"
             "\"pow\":%d,\"piyo\":%d,\"hsme\":%d,\"hsyou\":%d,\"guard\":%d,\"stun\":%d,\"stunmax\":%d,"
             "\"stunned\":%d,\"gauge\":%d,\"stock\":%d,\"stockmax\":%d,\"glen\":%d,\"in\":%d,\"char\":%d,"
-            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d}",
+            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d,\"par\":[%d,%d,%d,%d],\"uk\":%d}",
             w->xyz[0].disp.pos, w->xyz[1].disp.pos, w->rl_flag, w->routine_no[0], w->routine_no[1],
             w->routine_no[2], w->routine_no[3], w->now_koc, w->char_index, w->cg_type, w->cg_hit_ix, w->cg_att_ix,
             w->cg_cancel, w->pat_status, w->kind_of_waza, w->hit_stop, w->dm_stop, w->vital_new, w->dm_vital,
@@ -402,7 +407,9 @@ static void log_player(const PLW* p) {
             p->sa ? p->sa->gauge.s.h : -1, p->sa ? p->sa->store : -1, p->sa ? p->sa->store_max : -1,
             p->sa ? p->sa->gauge_len : -1, current_input[p == &plw[0] ? 0 : 1], p->player_number,
             p->sa ? p->sa->kind_of_arts : -1, w->original_vitality, p->sa ? p->sa->total_gauge : -1,
-            p->sa ? p->sa->gauge.i : -1, w->renew_attack < 0 ? -w->renew_attack : w->renew_attack);
+            p->sa ? p->sa->gauge.i : -1, w->renew_attack < 0 ? -w->renew_attack : w->renew_attack,
+            p->cp ? p->cp->waza_flag[3] : -1, waza_work[w->id & 1][3].w_type, waza_work[w->id & 1][3].shot_ok,
+            waza_work[w->id & 1][3].free3, p->ukemi_success);
 }
 
 void harness_end_frame(unsigned long frame) {

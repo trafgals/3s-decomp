@@ -6,6 +6,10 @@
 #include "sf33rd/Source/Game/SysDir.h"
 #include "sf33rd/Source/Game/cmd_data.h"
 
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s_throw.h"
+#endif
+
 void (*chk_move_jp[28])() = { check_init, check_0,  check_1,  check_2,  check_3,  check_4,  check_5,
                               check_6,    check_7,  check_7,  check_9,  check_10, check_11, check_12,
                               check_13,   check_14, check_15, check_16, check_16, check_18, check_19,
@@ -640,7 +644,16 @@ void check_10() {
             if (chk_pl->sw_lever == waza_ptr->w_lvr) {
                 waza_ptr->shot_ok++;
                 wcp[cmd_id].waza_flag[waza_type[cmd_id]] = wcp[cmd_id].reset[waza_type[cmd_id]];
+                // The parry's cooldown: the slot takes no new tap until free3 goes below 0 (states 2-4 below),
+                // 22 frames after the tap for a ground parry (reset 11). The first `reset - 1` of them are the
+                // window (waza_flag != 0). The hold timer w_int also ends the window if the lever is held 6
+                // frames.
+#if defined(UPPER_3S)
+                // Third Strike Upper: +2f on the parry cooldown (SM2).
+                waza_ptr->free3 = wcp[cmd_id].reset[waza_type[cmd_id]] + 10 + U3S_PARRY_COOLDOWN;
+#else
                 waza_ptr->free3 = wcp[cmd_id].reset[waza_type[cmd_id]] + 10;
+#endif
                 waza_ptr->w_int = 6;
 
                 switch (waza_type[cmd_id]) {

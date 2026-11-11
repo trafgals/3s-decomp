@@ -63,7 +63,15 @@ s16 upper3s_sys_whiff_start(WORK* wk, s16 asag) {
 
     divisor = 1 << upper3s_whiff_count[player];
 
-    return asag / divisor;
+    /*
+     * Rounded to the nearest unit, halves up. The gauge only counts whole units
+     * (PLS02.c:add_super_arts_gauge() adds asag to gauge.s.h), and a whiffed normal is
+     * worth about 2 of them, so truncating made every whiff after the second worth
+     * nothing (2, 1, 0, 0 ...). Rounded, the gains of a streak add up to what the
+     * document's 100% + 50% + 25% + 12.5% ... adds up to (2, 1, 1, 0 ...: 4 units, twice
+     * one whiff). Measured by tests/match/test_system.py.
+     */
+    return (s16)((asag * 2 + divisor) / (divisor * 2));
 }
 
 void upper3s_sys_whiff_contact(WORK* as, WORK* ds, s16 type) {
