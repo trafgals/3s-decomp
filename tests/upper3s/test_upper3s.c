@@ -14,6 +14,7 @@
 
 #include "common.h"
 #include "sf33rd/Source/Game/upper3s.h"
+#include "sf33rd/Source/Game/upper3s_chain.h"
 #include "sf33rd/Source/Game/upper3s_sys.h"
 
 static int failures;
@@ -34,18 +35,35 @@ static void check(int condition, const char* what) {
  * Builds a synthetic character.
  *
  * The retail layout puts the index of a move and the data of the move in
- * the same array: `char_table[koc][index]` holds the offset (in u32) of
- * the move's first frame block. The test mirrors that: the first
- * `MOVE_COUNT` entries are the move indices, the blocks start after them.
+ * the same array: `char_table[koc][index]` holds the byte offset of the
+ * move's chain. The test mirrors that: the first `MOVE_COUNT` entries are
+ * the move indices, the chain starts at word `BLOCK_POS`, the size of a
+ * block is in the word two before it (upper3s_chain_open()).
+ *
+ * The chain is the shape of a real move: a startup frame without attack
+ * data, then the frame that attacks, then the end marker (a frame held for
+ * U3S_CHAIN_WAIT_HOLD). The attack index is encoded as the engine reads it
+ * (CHARSET.c: the high half of the third word, shifted right by 6, negative
+ * on the frame that starts a new hit). An earlier version of this test put
+ * the index unshifted into the first block, which matched a bug of the
+ * override layer instead of the game.
  */
 #define MOVE_COUNT 4
 #define BLOCK_POS 8
+#define BLOCK_WORDS 4
+#define SLOT_WORDS 32
 #define ATT_COUNT 4
 
-static u32 char_table[U3S_KOC_COUNT][MOVE_COUNT + BLOCK_POS];
+static u32 char_table[U3S_KOC_COUNT][SLOT_WORDS];
 static UNK_7 att_ix_table[ATT_COUNT];
 
-static void setup_character(PLW* wk, s16 char_id, s16 koc, s16 index, s16 att_ix) {
+static u32 att_word(s16 att_ix, int new_hit) {
+    s16 raw = (s16)(att_ix << 6);
+
+    return (u32)(u16)(new_hit ? -raw : raw) << 16;
+}
+
+static void setup_character_hit(PLW* wk, s16 char_id, s16 koc, s16 index, s16 att_ix, int new_hit) {
     int i;
 
     memset(wk, 0, sizeof(PLW));
@@ -60,9 +78,13 @@ static void setup_character(PLW* wk, s16 char_id, s16 koc, s16 index, s16 att_ix
         att_ix_table[i].hs_you = (s8)(i + 2);
     }
 
-    /* The move header of move `index` lives at u32 offset `BLOCK_POS`. */
+    /* The chain of move `index` starts at word `BLOCK_POS`. */
     char_table[koc][index] = BLOCK_POS * 4;
-    char_table[koc][BLOCK_POS + 2] = (u32)((att_ix & 0xFFFF) << 16);
+    char_table[koc][BLOCK_POS - 2] = BLOCK_WORDS;
+    char_table[koc][BLOCK_POS + 0 * BLOCK_WORDS + 0] = 3 << 8; /* startup: held 3 frames, no attack */
+    char_table[koc][BLOCK_POS + 1 * BLOCK_WORDS + 0] = 2 << 8; /* active: held 2 frames */
+    char_table[koc][BLOCK_POS + 1 * BLOCK_WORDS + 2] = att_word(att_ix, new_hit);
+    char_table[koc][BLOCK_POS + 2 * BLOCK_WORDS + 0] = U3S_CHAIN_WAIT_HOLD << 8; /* the end */
 
     for (i = 0; i < U3S_KOC_COUNT; i++) {
         wk->wu.char_table[i] = char_table[i];
@@ -72,6 +94,10 @@ static void setup_character(PLW* wk, s16 char_id, s16 koc, s16 index, s16 att_ix
     wk->player_number = char_id;
     wk->wu.now_koc = koc;
     wk->wu.char_index = index;
+}
+
+static void setup_character(PLW* wk, s16 char_id, s16 koc, s16 index, s16 att_ix) {
+    setup_character_hit(wk, char_id, koc, index, att_ix, 0);
 }
 
 static void test_apply_move_rewrites_the_right_entry(void) {
@@ -101,6 +127,26 @@ static void test_apply_move_rewrites_the_right_entry(void) {
     check(att_ix_table[3].impact == 13, "a neighbouring entry keeps its knockback");
     check(att_ix_table[0].hs_me == 1, "a neighbouring entry keeps the hitstun of the attacker");
     check(att_ix_table[3].hs_you == 5, "a neighbouring entry keeps the hitstun of the defender");
+}
+
+static void test_apply_move_reads_a_new_hit_frame(void) {
+    PLW wk;
+    Upper3sMove move;
+
+    printf("apply_move: the frame that starts a new hit (negative index) names its entry too\n");
+
+    setup_character_hit(&wk, U3S_KEN, U3S_KOC_ATTACK, 1, 3, 1);
+
+    memset(&move, 0, sizeof(move));
+    move.koc = U3S_KOC_ATTACK;
+    move.index = 1;
+    move.flags = U3S_MV_HS_YOU;
+    move.hs_you = -14;
+
+    upper3s_apply_move(&wk.wu, &move);
+
+    check(att_ix_table[3].hs_you == -14, "the entry of the new hit is rewritten");
+    check(att_ix_table[0].hs_you == 2, "the entry of the startup frame (0, no attack) is untouched");
 }
 
 static void test_apply_move_without_flags_changes_nothing(void) {
@@ -398,6 +444,7 @@ int main(void) {
     printf("Third Strike Upper - data layer tests\n\n");
 
     test_apply_move_rewrites_the_right_entry();
+    test_apply_move_reads_a_new_hit_frame();
     test_apply_move_without_flags_changes_nothing();
     test_apply_move_ignores_moves_without_attack_data();
     test_apply_move_ignores_an_out_of_range_move();

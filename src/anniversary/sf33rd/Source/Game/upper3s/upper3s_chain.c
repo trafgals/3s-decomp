@@ -299,6 +299,36 @@ static s32 upper3s_chain_frames(const Upper3sChain* chain, Upper3sFrame* frames,
 /*
  * Reads the startup and the recovery of the chain out of its data.
  */
+/*
+ * The attack data entries the move uses: the distinct non-zero attack indexes of its
+ * frames, in the order of the frames (see the header).
+ */
+s32 upper3s_chain_attacks(const Upper3sChain* chain, s16* out, s32 max) {
+    Upper3sFrame frames[U3S_CHAIN_MAX_FRAMES];
+    s32 stopped;
+    s32 n;
+    s32 i;
+    s32 j;
+    s32 count = 0;
+
+    n = upper3s_chain_frames(chain, frames, U3S_CHAIN_MAX_FRAMES, &stopped);
+
+    for (i = 0; i < n; i++) {
+        if (frames[i].att == 0) {
+            continue;
+        }
+
+        for (j = 0; j < count && out[j] != frames[i].att; j++) {
+        }
+
+        if (j == count && count < max) {
+            out[count++] = (s16)frames[i].att;
+        }
+    }
+
+    return count;
+}
+
 int upper3s_chain_info(const Upper3sChain* chain, Upper3sChainInfo* info) {
     Upper3sFrame frames[U3S_CHAIN_MAX_FRAMES];
     s32 n;

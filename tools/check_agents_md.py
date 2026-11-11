@@ -349,13 +349,18 @@ def check_build(md):
     all_src = "\n".join(text(p) for p in list((ROOT / "include").rglob("*.h")) + list(ANNIV.rglob("*.c")))
     check(not re.search(r"\}\s*GAUGE\s*;", all_src), "a GAUGE struct exists")
 
-    # These "not yet" checks are meant to start failing: once someone adds an UPPER_3S build or a tests/
-    # directory, AGENTS.md 5 and remaining.md I1/I3 are out of date and must be updated with the change.
+    # The build facts of 5.1/5.2: the PS2 rule byte-compares, UPPER_3S adds -DUPPER_3S, the host
+    # platforms exist, and both test suites and their make targets are there.
     mk = text(ROOT / "Makefile")
-    check("UPPER_3S" not in mk, "the Makefile mentions UPPER_3S: update AGENTS.md 5.1 and remaining.md I1")
-    check(re.search(r"\$\(COMPARE_BYTES\) \$\(MAIN\) \$\(MAIN_TARGET\)", mk), "the build no longer byte-compares")
+    check(re.search(r"\$\(COMPARE_BYTES\) \$\(MAIN\) \$\(MAIN_TARGET\)", mk), "the PS2 build no longer byte-compares")
     check(re.search(r"\$\(CRI_O_FILES\):.*\n.*\n\s*\$\(EEGCC_PATHS\) \$\(EEGCC\)", mk), "CRI is not built with EE GCC")
-    check(not (ROOT / "tests").exists() or not any((ROOT / "tests").rglob("*")), "a tests/ directory exists: update 5.2")
+    check(re.search(r"ifeq \(\$\(UPPER_3S\),1\)\nUPPER_3S_DEFINE := -DUPPER_3S", mk), "UPPER_3S=1 does not add -DUPPER_3S")
+    for platform in ("web", "headless"):
+        check(f"ifeq ($(PLATFORM),{platform})" in mk, f"the Makefile has no PLATFORM={platform}")
+    for target in ("test:", "match-test:", "match-build:"):
+        check(re.search(rf"^{target}", mk, re.M), f"the Makefile has no {target} target")
+    for d in ("tests/upper3s", "tests/match", "src/anniversary/port/headless", "src/anniversary/sf33rd/Source/Game/upper3s"):
+        check((ROOT / d).is_dir(), f"{d} is missing")
 
 
 def check_identifiers(md):
@@ -407,7 +412,7 @@ def check_remaining(md, chars):
             kinds = {k.strip() for k in c[2].split("+")}
             check(kinds <= KINDS, f"remaining.md:{lineno}: unknown kind {kinds - KINDS}")
             status = c[-1].split()[0] if c[-1] else ""
-            check(status in {"done", "partial", "—", "n/a"}, f"remaining.md:{lineno}: unknown status '{c[-1]}'")
+            check(status in {"verified", "done", "partial", "—", "n/a"}, f"remaining.md:{lineno}: unknown status '{c[-1]}'")
             items.append(("none" in kinds, status))
         # "`super_arts_data[c][s]` 104/2 → 128/1": the value before the arrow is the claimed retail value
         # (length/stocks) and must match the table; the target after it is the spec's and isn't checked.
@@ -433,13 +438,14 @@ def check_remaining(md, chars):
     check(seen_chars == set(range(20)), f"remaining.md: character sections missing: {sorted(set(range(20)) - seen_chars)}")
 
     work = [s for none, s in items if not none]
-    counts = {"all": len(work), "none": sum(1 for none, _ in items if none),
+    counts = {"all": len(work), "none": sum(1 for none, _ in items if none), "verified": work.count("verified"),
               "done": work.count("done"), "partial": work.count("partial"), "open": work.count("—")}
     m = re.search(r"\*\*(\d+) work items\*\* \(plus (\d+) \"no change\" items\)\. On `main`: all (\d+) open\. "
-                  r"On PR #1: (\d+) done, (\d+) partial, (\d+) not done\.", md)
+                  r"On this branch: (\d+) verified in a fight test, (\d+) done but not yet measured, (\d+) partial, "
+                  r"(\d+) not done\.", md)
     if check(m is not None, "remaining.md: summary line not found"):
-        got = dict(zip(("all", "none", "main", "done", "partial", "open"), map(int, m.groups())))
-        for k in ("all", "none", "done", "partial", "open"):
+        got = dict(zip(("all", "none", "main", "verified", "done", "partial", "open"), map(int, m.groups())))
+        for k in ("all", "none", "verified", "done", "partial", "open"):
             check(got[k] == counts[k], f"remaining.md summary: {k} is {got[k]}, the tables give {counts[k]}")
         check(got["main"] == counts["all"], "remaining.md summary: 'all N open' does not match the item count")
     return counts

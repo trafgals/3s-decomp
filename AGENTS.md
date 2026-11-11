@@ -140,13 +140,19 @@ The specification is Mike Z's post (linked in §1). It is the only source for *w
 ## 5. Build & Verification Gates
 
 ### 5.1 What the build is today
-- `make build` produces a PS2 ELF and **fails unless it matches the retail `THIRD_U.BIN` byte for byte** (`tools/compare_bytes.py`). It needs your own `THIRD_U.BIN` in the repository root, `make setup_tools`, `make split`, and initialised submodules (`git submodule update --init`). See `docs/builde-guide.md`.
-- CRI middleware is compiled with EE GCC 2.96. Everything else, game code included, is compiled with CodeWarrior (`mwccps2`, run through `wibo` and `mwccgap`). There is no host/PC build: upstream removed the port (#303).
-- Nothing in the Makefile defines `UPPER_3S`, and there is no non-matching build target. Until both exist, no 3s' build can be produced. This is the first infrastructure item in `docs/upper3s/remaining.md`.
+- `make build` (the default, `PLATFORM=ps2`) produces a PS2 ELF and **fails unless it matches the retail `THIRD_U.BIN` byte for byte** (`tools/compare_bytes.py`). It needs your own `THIRD_U.BIN` in the repository root, `make setup_tools`, `make split`, and initialised submodules (`git submodule update --init`). See `docs/builde-guide.md`. CRI middleware is compiled with EE GCC 2.96, everything else with CodeWarrior (`mwccps2`, run through `wibo` and `mwccgap`).
+- `UPPER_3S=1` compiles the 3s' patch in (`-DUPPER_3S` and the sources of `src/anniversary/sf33rd/Source/Game/upper3s/`). The PS2 rule always byte-compares, so a 3s' build is a host build:
+  - `PLATFORM=linux`: the SDL3 port (needs SDL3 and the ffmpeg libraries through `pkg-config`).
+  - `PLATFORM=web`: the WebAssembly port (emscripten and an SDL3 WebAssembly build).
+  - `PLATFORM=headless`: no window, sound or pacing, no dependencies; for tests (`src/anniversary/port/headless/`).
+
+  All of them read the disc's files from `rom/THIRD/` (`SF33RD.AFS` and the `IOP` directory) in the working directory.
 
 ### 5.2 Checklist before committing
-1. **Functional test (§2.2):** an automated test for the change must exist and pass. There is no test harness on `main` yet; the first change that needs one adds it.
-2. **The vanilla build stays matching:** with `UPPER_3S` off, `make build` must still print `Files match ✅`. Every change to a shared file goes behind `#if defined(UPPER_3S)` / `#if !defined(UPPER_3S)`. For a comment-only edit, `python3 tools/check_comments_only.py` proves the same thing without the game file: it compares what the compiler sees before and after.
+1. **Functional test (§2.2):** an automated test for the change must exist and pass. There are two suites:
+   - `make test`: unit tests of the patch layer on synthetic characters (`tests/upper3s/`), no game data needed.
+   - `make match-test`: fight tests (`tests/match/`) that play scripted fights in the vanilla and the 3s' headless builds and measure startup, advantage, damage, stun and meter in the real engine. They need `SF33_GAME_DATA` pointing at the disc's files. A balance change is verified only when a fight test measures it.
+2. **The vanilla build stays matching:** with `UPPER_3S` off, `make build` must still print `Files match ✅`. Every change to a shared file goes behind `#if defined(UPPER_3S)` / `#if !defined(UPPER_3S)`. Without the game file, `bash tools/verify/ps2_touched_sources.sh` compares the preprocessed PS2 sources with those of the retail-matched commit, and for a comment-only edit `python3 tools/check_comments_only.py` compares what the compiler sees before and after.
 3. **Struct layout:** `PLW` is 0x46C bytes, `WORK` 0x388, `SA_DATA` 0x10 and `SPG_DAT` 0x34; the field offsets are commented in `include/structs.h` and the headers. Do not change them. Keep 3s' state in separate structures. (There is no `GAUGE` struct.)
-4. **Compiler:** game code must compile under `mwccps2` with the Makefile's flags. There is no GCC target for game code.
+4. **Compiler:** game code must compile under `mwccps2` with the Makefile's flags (the PS2 build) and under clang with `-Werror` (the host builds).
 5. **This file:** after editing §3, run `python3 tools/check_agents_md.py`.

@@ -104,6 +104,18 @@ int upper3s_chain_open(WORK* wk, s16 koc, s16 index, Upper3sChain* chain);
 int upper3s_chain_info(const Upper3sChain* chain, Upper3sChainInfo* info);
 
 /*
+ * The attack data entries the move uses: the distinct non-zero attack indexes of the
+ * frames of its chain (the index of att_ix_table that CHARSET.c:set_new_attnum() loads
+ * when the frame plays: the high half of the third word of the frame, shifted right by
+ * 6, negative on the frame that starts a new hit). Writes at most `max` of them to
+ * `out` and returns how many there are; 0 when no frame of the chain attacks.
+ *
+ * An entry can be shared with other moves: patching it changes all of them.
+ */
+#define U3S_CHAIN_MAX_ATTACKS 16
+s32 upper3s_chain_attacks(const Upper3sChain* chain, s16* out, s32 max);
+
+/*
  * Sets the startup of the move to `frames` game frames.
  *
  * The change is only made when the chain still has the startup `from`,

@@ -1836,7 +1836,16 @@ s32 check_cg_cancel_data(PLW* wk) {
     //
     // The hook has to be before the test below, because a move whose mask of
     // the disc is empty never reaches the tests of the cancels.
-    wk->wu.cg_cancel = upper3s_cancel_mask(wk->player_number, wk->wu.now_koc, wk->as->char_ix, wk->wu.cg_cancel);
+    //
+    // wk->as is the assignment entry of the current move, set when a move starts
+    // (PLS03.c sets it for every normal). It is NULL until the player's first move of
+    // the round, and this function runs on neutral frames too (nm_01000() at the start
+    // of the round), so without a move there is nothing to look up. Found by the
+    // headless fight harness: the first frame of every fight crashed here.
+    if (wk->as != NULL) {
+        wk->wu.cg_cancel =
+            upper3s_cancel_mask(wk->player_number, wk->wu.now_koc, wk->as->char_ix, wk->wu.cg_cancel);
+    }
 #endif
     if (wk->wu.cg_cancel == 0) {
         return 0;

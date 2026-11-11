@@ -45,13 +45,19 @@ static void check(int condition, const char* what) {
 }
 
 /* Every move of the synthetic character has a chain of its own, so that the
- * framework can tell the moves apart. */
-#define MOVE_COUNT 40
-#define HEADER_WORDS 4
-#define BLOCK_POS 64
-#define ATT_COUNT MOVE_COUNT
+ * framework can tell the moves apart. The chain of move `i` has the shape of a
+ * real one (see test_upper3s.c): the size of a block two words in front of it,
+ * a startup frame without attack data, the attacking frame, the end marker.
+ * Move `i` attacks with entry `i + 1` of the attack table: entry 0 is "no
+ * attack" for the engine (CHARSET.c), and the index is encoded the way the
+ * engine reads it (shifted left by 6 into the high half of the third word). */
+#define MOVE_COUNT 70
+#define BLOCK_WORDS 4
+#define MOVE_WORDS 16
+#define BLOCK_POS 72
+#define ATT_COUNT (MOVE_COUNT + 1)
 
-static u32 char_table[U3S_KOC_COUNT][BLOCK_POS + MOVE_COUNT * HEADER_WORDS];
+static u32 char_table[U3S_KOC_COUNT][BLOCK_POS + MOVE_COUNT * MOVE_WORDS];
 static UNK_7 att_ix_table[ATT_COUNT];
 
 /* The hitstun of the retail game, so that the test can tell a rewritten
@@ -74,15 +80,20 @@ static void setup_character(PLW* wk, s16 char_id) {
         retail_hs_you[i] = att_ix_table[i].hs_you;
     }
 
-    /* The chain of the move `i` starts at the header `i`, and the header
-     * carries the index of the attack data of the move. */
     for (i = 0; i < MOVE_COUNT; i++) {
-        u32 word = BLOCK_POS + i * HEADER_WORDS;
+        u32 base = BLOCK_POS + i * MOVE_WORDS + 2;
+        int k;
 
-        char_table[U3S_KOC_NORMAL][i] = word * 4;
-        char_table[U3S_KOC_NORMAL][word + 2] = (u32)((i & 0xFFFF) << 16);
-        char_table[U3S_KOC_ATTACK][i] = word * 4;
-        char_table[U3S_KOC_ATTACK][word + 2] = (u32)((i & 0xFFFF) << 16);
+        for (k = 0; k < 2; k++) {
+            u32* slot = char_table[k == 0 ? U3S_KOC_NORMAL : U3S_KOC_ATTACK];
+
+            slot[i] = base * 4;
+            slot[base - 2] = BLOCK_WORDS;
+            slot[base + 0 * BLOCK_WORDS] = 3 << 8; /* startup */
+            slot[base + 1 * BLOCK_WORDS] = 2 << 8; /* active */
+            slot[base + 1 * BLOCK_WORDS + 2] = (u32)((i + 1) << 22);
+            slot[base + 2 * BLOCK_WORDS] = 250 << 8; /* the end marker (U3S_CHAIN_WAIT_HOLD) */
+        }
     }
 
     for (i = 0; i < U3S_KOC_COUNT; i++) {
@@ -104,7 +115,7 @@ static s16 applied_hs_you(s16 char_id, s16 koc, s16 index) {
     wk.wu.char_index = index;
     upper3s_apply_character(&wk);
 
-    return (s16)att_ix_table[index].hs_you;
+    return (s16)att_ix_table[index + 1].hs_you;
 }
 
 /* The overrides of one character that the design document asks for. */
@@ -168,10 +179,10 @@ int main(void) {
     /* A move that the design document does not touch keeps the hitstun of the
      * disc. */
     value = applied_hs_you(U3S_RYU, U3S_KOC_NORMAL, 0);
-    check(value == retail_hs_you[0], "Ryu: the standing Jab keeps the hitstun of the disc");
+    check(value == retail_hs_you[1], "Ryu: the standing Jab keeps the hitstun of the disc");
 
     value = applied_hs_you(U3S_KEN, U3S_KOC_NORMAL, 6);
-    check(value == retail_hs_you[6], "Ken: the close Fierce keeps the hitstun of the disc");
+    check(value == retail_hs_you[7], "Ken: the close Fierce keeps the hitstun of the disc");
 
     printf("the hitstun items: %d checks, %d failures\n", checks, failures);
 

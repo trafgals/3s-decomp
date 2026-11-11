@@ -99,27 +99,6 @@ const Upper3sMove* upper3s_moves[U3S_CHAR_COUNT] = {
 };
 
 /*
- * Looks up the move header of (koc, index) and returns the index of its
- * attack data, or -1 when the move has none.
- */
-static s16 upper3s_att_index(WORK* wk, s16 koc, s16 index) {
-    u32* set_char_ad;
-
-    if (koc < 0 || koc >= U3S_KOC_COUNT || index < 0) {
-        return -1;
-    }
-
-    if (wk->char_table[koc] == NULL) {
-        return -1;
-    }
-
-    set_char_ad = &wk->char_table[koc][wk->char_table[koc][index] / 4];
-
-    /* set_char_ad[2] holds { cg_hit_ix, cg_att_ix }. */
-    return (s16)(set_char_ad[2] >> 16);
-}
-
-/*
  * Applies a single move override to the loaded attack table.
  *
  * The move header carries the index of the attack data it uses; the attack
@@ -185,7 +164,6 @@ static void upper3s_note_failure(const Upper3sMove* move, u16 flags) {
 }
 
 void upper3s_apply_move(WORK* wk, const Upper3sMove* move) {
-    s16 att_ix;
     UNK_7* att;
 
     /*
@@ -224,30 +202,54 @@ void upper3s_apply_move(WORK* wk, const Upper3sMove* move) {
         }
     }
 
-    att_ix = upper3s_att_index(wk, move->koc, move->index);
-
-    if (att_ix < 0) {
+    if (!(move->flags & (U3S_MV_IMPACT | U3S_MV_HS_ME | U3S_MV_HS_YOU))) {
         return;
     }
 
-    att = &wk->att_ix_table[att_ix];
-
     /*
-     * `pow` is an index into Power_Data and `piyo` is an index into a
-     * per player table, so neither of them can be patched in place.
-     * They are handled by the runtime helpers instead.
+     * The attack data of a move is the att_ix_table entry its attacking frames load
+     * (CHARSET.c:set_new_attnum()), so the entries are read out of the frames of the
+     * chain. The first frame of a move is a startup frame with no attack: reading the
+     * index there (as an earlier version did, and without the shift by 6) patched an
+     * unrelated entry - Ryu's standing Jab got the hitstun meant for his close Fierce -
+     * and left the move itself unchanged. The headless fight harness found it
+     * (tests/match). Every entry of a multi-hit move gets the change.
      */
+    {
+        Upper3sChain chain;
+        s16 entries[U3S_CHAIN_MAX_ATTACKS];
+        s32 n;
+        s32 k;
 
-    if (move->flags & U3S_MV_IMPACT) {
-        att->impact = (s8)move->impact;
-    }
+        n = upper3s_chain_open(wk, move->koc, move->index, &chain)
+                ? upper3s_chain_attacks(&chain, entries, U3S_CHAIN_MAX_ATTACKS)
+                : 0;
 
-    if (move->flags & U3S_MV_HS_ME) {
-        att->hs_me = (s8)move->hs_me;
-    }
+        if (n == 0) {
+            upper3s_note_failure(move, move->flags & (U3S_MV_IMPACT | U3S_MV_HS_ME | U3S_MV_HS_YOU));
+            return;
+        }
 
-    if (move->flags & U3S_MV_HS_YOU) {
-        att->hs_you = (s8)move->hs_you;
+        /*
+         * `pow` is an index into Power_Data and `piyo` is an index into a
+         * per player table, so neither of them can be patched in place.
+         * They are handled by the runtime helpers instead.
+         */
+        for (k = 0; k < n; k++) {
+            att = &wk->att_ix_table[entries[k]];
+
+            if (move->flags & U3S_MV_IMPACT) {
+                att->impact = (s8)move->impact;
+            }
+
+            if (move->flags & U3S_MV_HS_ME) {
+                att->hs_me = (s8)move->hs_me;
+            }
+
+            if (move->flags & U3S_MV_HS_YOU) {
+                att->hs_you = (s8)move->hs_you;
+            }
+        }
     }
 }
 

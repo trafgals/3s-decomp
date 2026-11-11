@@ -35,6 +35,8 @@ else ifeq ($(PLATFORM),windows)
 	MAIN := sf33rd.exe
 else ifeq ($(PLATFORM),web)
 	MAIN := sf33rd.js
+else ifeq ($(PLATFORM),headless)
+	MAIN := sf33rd-headless
 else
 	MAIN := sf33rd
 endif
@@ -121,9 +123,16 @@ CLANG_LINKER_FLAGS := -lm -g
 # header rebuilds the sources that include it.
 CLANG_FLAGS += -MMD -MP
 
+ifeq ($(PLATFORM),headless)
+# The headless build (for tests) has no window, sound or frame pacing and needs
+# neither SDL nor ffmpeg: port/headless/ implements the port functions, and
+# include/port/headless supplies the few SDL type names the port headers use.
+CLANG_FLAGS := -Iinclude/port/headless $(CLANG_FLAGS) -DTARGET_HEADLESS
+else
 PORT_PACKAGES := sdl3 libavcodec libavutil libavformat libswresample
 CLANG_FLAGS += $(shell pkg-config --cflags $(PORT_PACKAGES))
 CLANG_LINKER_FLAGS += $(shell pkg-config --libs $(PORT_PACKAGES))
+endif
 
 # Web (emscripten) flags
 
@@ -189,9 +198,15 @@ PORT_C_FILES := $(shell find $(SRC_DIR)/port -name '*.c' 2>/dev/null)
 ifeq ($(PLATFORM),web)
 # The ADX music player needs ffmpeg; the web build uses a stub instead.
 PORT_C_FILES := $(filter-out $(SRC_DIR)/port/sdl/sdl_adx_sound.c,$(PORT_C_FILES))
+else ifeq ($(PLATFORM),headless)
+# The headless port replaces the SDL port and the SDL sound output.
+PORT_C_FILES := $(filter-out $(SRC_DIR)/port/web/% $(SRC_DIR)/port/sdl/% $(SRC_DIR)/port/sound/spu.c,$(PORT_C_FILES))
 else
 # The web backends need the emscripten headers.
 PORT_C_FILES := $(filter-out $(SRC_DIR)/port/web/%,$(PORT_C_FILES))
+endif
+ifneq ($(PLATFORM),headless)
+PORT_C_FILES := $(filter-out $(SRC_DIR)/port/headless/%,$(PORT_C_FILES))
 endif
 LIBCO_C_FILES := libco/libco.c
 ifeq ($(PLATFORM),web)
@@ -311,6 +326,21 @@ print-o-files:
 	@echo $(ALL_O_FILES) | tr ' ' '\n'
 
 .PHONY: print-ps2-sources print-o-files
+
+# Fight tests
+#
+# The two headless builds (vanilla and 3s') play scripted fights and the tests in
+# tests/match measure them against the design document. They need the game data:
+# SF33_GAME_DATA must point at a directory with rom/THIRD/SF33RD.AFS and rom/THIRD/IOP.
+# See tests/match/README.md.
+match-build:
+	$(MAKE) PLATFORM=headless UPPER_3S=1 BUILD_DIR=build/$(VERSION)/headless build
+	$(MAKE) PLATFORM=headless UPPER_3S=0 BUILD_DIR=build/$(VERSION)/headless-vanilla build
+
+match-test: match-build
+	cd tests/match && $(PYTHON) -m unittest discover -p 'test_*.py' -v
+
+.PHONY: match-build match-test
 
 # Third Strike Upper tests
 #
