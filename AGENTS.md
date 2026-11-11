@@ -6,7 +6,7 @@ This document governs autonomous and pair-programming agents (Antigravity, MiniM
 
 ## 1. Mission & Purpose
 
-`trafgals/3s-decomp` is a fork of [`crowded-street/3s-decomp`](https://github.com/crowded-street/3s-decomp), which decompiled the entire game logic of *Street Fighter III: 3rd Strike* (PlayStation 2 `THIRD_U.BIN`) into matching C source code.
+`trafgals/3s-decomp` is a fork of [`crowded-street/3s-decomp`](https://github.com/crowded-street/3s-decomp), which decompiled the game logic of *Street Fighter III: 3rd Strike* (PlayStation 2 `THIRD_U.BIN`) into matching C source code. What is left: two game functions are still assembly (`INCLUDE_ASM`: `MTRANS` `mlt_obj_trans_rgb_ext`, `end_20` `sea_write`), the two effect jump tables of `EFFXX` are still included as data (`INCLUDE_RODATA`: `effmovejptbl`, `effinitjptbl`), and six CRI middleware functions are not decompiled (`cri-progress.md`).
 
 The primary objective of this fork is to implement the definitive **"Third Strike Upper (3s')"** balance overhaul and system bugfix patch engineered by fighting game designer **Mike Zaimont (Mike Z)**:
 > 🔗 **Design Specification**: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html)
@@ -45,85 +45,107 @@ For **every single user request**, the agent **MUST** write and execute an autom
 
 ## 3. Codebase Architecture & Subsystem Mapping
 
-The game logic resides in `src/anniversary/sf33rd/Source/Game/`. Capcom organized fighters by a 2-digit index (`00` to `19`):
+Every file, symbol and value named in this section is checked against the source by `tools/check_agents_md.py`. Run it after editing this section.
+
+- Game logic: `src/anniversary/sf33rd/Source/Game/`
+- Tables converted from binary data: `src/anniversary/bin2obj/`
+- Shared structs: `include/structs.h`; per-file headers: `include/sf33rd/Source/Game/`
 
 ### 3.1 Character Index Map
+
+This is the index the game uses: `PLW.player_number`, `My_char[]`, and every `[20]` per-character table (`PLCNT.c:super_arts_data`, `PLCNT.c:pl_piyo_tbl`, `Com_Data.c:Com_Vital_Unit_Data`, `bin2obj/gauge.c:_add_arts_gauge`, …). Two tables in the source give the order: the CPU table `Ck_Pass.c:Passive_AS_tbl` (`VS_GILL_AS`, `VS_ALEX_AS`, `VS_RYU_AS`, …; Yang, 10, reuses `VS_YUN_AS`) and the stage names in `Eff99.c` (`"ALEX STAGE"` … `"REMY STAGE"`; Gill and Q are blank). The retail values agree with it: `super_arts_data[11]` gives Ken's Shippu Jinrai Kyaku its 3 stocks, and `pl_piyo_tbl[14]` (Akuma) and `pl_piyo_tbl[19]` (Remy) are the two short stun bars.
+
 | ID | Character | ID | Character | ID | Character | ID | Character |
 |:---:|:---|:---:|:---|:---:|:---|:---:|:---|
-| `00` | Alex | `05` | Hugo | `10` | Ken | `15` | Makoto |
-| `01` | Ryu | `06` | Ibuki | `11` | Sean | `16` | Q |
-| `02` | Yun | `07` | Elena | `12` | Urien | `17` | Twelve |
-| `03` | Dudley | `08` | Oro | `13` | Gouki (Akuma) | `18` | Remy |
-| `04` | Necro | `09` | Yang | `14` | Chun-Li | `19` | Gill |
+| `00` | Gill | `05` | Necro | `10` | Yang | `15` | Chun-Li |
+| `01` | Alex | `06` | Hugo | `11` | Ken | `16` | Makoto |
+| `02` | Ryu | `07` | Ibuki | `12` | Sean | `17` | Q |
+| `03` | Yun | `08` | Elena | `13` | Urien | `18` | Twelve |
+| `04` | Dudley | `09` | Oro | `14` | Gouki (Akuma) | `19` | Remy |
 
-### 3.2 Core Combat Files
-- **Player State & Movesets (`PLSxx.c`)**: State machine handling normals, specials, supers, frame timers, and cancel transitions for character `xx`.
-- **Parameter Data (`passxx.c` / `PASSxx.c`)**: Frame data tables, hitbox coordinates, damage values, pushbox dimensions, and velocity vectors.
-- **Combat & Collision (`HITCHECK.c`, `HITEFPL.c`, `HITPLPL.c`)**:
-  - `check_blocking_flag()`: Parrying ("Blocking") detection, input direction checks, high/low/air validation.
-  - `make_red_blocking_time()`: Red parry timing window during hitstop.
-- **Super Art Gauge Engine (`spgauge.c`)**: Super meter lengths, stock counts, meter build multipliers on hit/whiff/block.
-- **Throws & Throws Interlocks (`Com_Sub.c`, `HITPLPL.c`)**: Throw startup, range, tech windows, and throw invulnerability states.
-- **Vitality & Stun (`VITAL.c`, `stun.c`)**: Health points, stun gauge capacities, stun recovery rates.
+The character data loaded from disc is keyed by a different number, the charset id: `charset_id = PLCNT.c:plid_data[index]`.
+
+### 3.2 Per-character files and their numbering
+
+There are **no per-character `PLSxx.c` files**. `PLS00.c`–`PLS03.c` are shared engine code (3.3). The per-character sources are the three families below, and they do not all number the same way. File-name case varies (`PLPAT09.c` / `plpat10.c`, `PASS11.c` / `pass10.c`).
+
+| Files | What they contain | Numbering |
+|:---|:---|:---|
+| `passNN.c` | CPU opponent AI ("Passive" patterns), dispatched by `Com_Pl.c:Com_Passive()`. No frame data, hitboxes or damage. | `NN` = index (`pass16.c` is Makoto) |
+| `plpatNN.c` | Character-specific special and super behaviour: `plNN_extra_attack()` and the `Att_*` routines, dispatched by `PLPAT.c:plxx_extra_attack_table` | `NN` = index for 0–14, **index + 1 for 15–19** (no file is numbered 15): Chun-Li `plpat16.c`, Makoto `plpat17.c`, Q `plpat18.c`, Twelve `plpat19.c`, Remy `plpat20.c` |
+| `pX_cmd` in `cmd_data.c` | Command (motion) tables, listed in index order in `cmd_data.c:pl_cmd[20]` | `p0`–`p9` and `pA`–`pE` for 0–14, `p10`–`p14` for 15–19 (Makoto is `p11_cmd`) |
+
+### 3.3 Where things live
+
+**Per-character values that are in the source**
+
+| What | Where |
+|:---|:---|
+| Super art stocks and bar length | `PLCNT.c:super_arts_data[20][4]`: `SA_DATA.store_max` (stocks) and `SA_DATA.gauge_len`. `super_arts_DATA` is read instead when `cmd_sel[ix]` or `no_sa[ix]` is set. |
+| Stun bar size | `PLCNT.c:pl_piyo_tbl[20]` (56 short, 64 regular, 72 long) |
+| Stun recovery | `PLCNT.c:pl_nr_piyo_tbl[20]` |
+| Health | `Com_Data.c:Com_Vital_Unit_Data[20][4][12]`. It is read by `PLS02.c:setup_vitality()` for every player, despite the `Com` prefix. |
+| Meter gain | `bin2obj/gauge.c:_add_arts_gauge[20][16][4]`, row = the attack's `add_arts_point`. Column 0 is the gain when an attack starts, whether or not it connects (the whiff gain): `PLS02.c:add_sp_arts_gauge_init()`, called from `CHARSET.c` as the attack frame loads. Column 1 is on block (`add_sp_arts_gauge_guard()`), 2 on hit (`add_sp_arts_gauge_hit_dm()`), 3 on parry (`add_sp_arts_gauge_paring()`). |
+| Stun per hit | `bin2obj/gauge.c:_add_piyo_gauge[20][16]`, indexed by the attack's `att.piyo` (`HITCHECK.c:set_damage_and_piyo()`) |
+| Damage | `POW_DATA.c:Power_Data[256]`, indexed by the attack data; the calculation and scaling are in `Pow_Pow.c:cal_damage_vitality()` |
+
+**Shared player engine**
+
+| File | Role |
+|:---|:---|
+| `PLCNT.c` | Player control (`Player_control()`) and the per-character tables above |
+| `PLMAIN.c`, `PLMAIN2.c` | Per-frame player update (`Player_move()`) |
+| `PLS00.c` | Normal-state machine (`nm_*`, e.g. the air-throw-tech state `nm_49000()`), lever checks, cancel checks (`check_cg_cancel_data()`) |
+| `PLS01.c` | Superflash stop (`sa_stop_check()`), tech-roll (`ukemi`) checks |
+| `PLS02.c` | Movement data (`setup_mvxy_data()`), meter gain (`add_sp_arts_gauge_*()`), health setup (`setup_vitality()`) |
+| `PLS03.c` | Special and super command checks (`hissatsu_setup_union()`, `check_super_arts_attack()`); universal overhead and taunt input (`check_leap_attack()`, `check_chouhatsu()`) |
+| `PLPNM.c`, `PLPDM.c`, `PLPCA.c`, `PLPCU.c` | Player state routines: normal, damage, throwing (`Player_catch()`, and the throw tech `check_nagenuke()`), being thrown (`Player_caught()`) |
+| `PLPAT.c`, `PLPATUNI.c` | Attack-state dispatch, and special-move routines shared by several characters (`Att_HADOUKEN`, …) |
+| `CMD_MAIN.c` | Command interpreter: motion checks (`check_0()`, …); charge (`tame`) in `check_1()`/`check_2()`; input timers `waza_work[][].w_int` (declared in `cmd_data.c`); parry input (`paring_miss_init()`) |
+
+**Combat**
+
+| File | Role |
+|:---|:---|
+| `HITCHECK.c` | Hit detection. Parry: `check_blocking_flag()`, `make_red_blocking_time()`, `defense_ground()`, `defense_sky()`. Throws: `catch_hit_check()`, `set_caught_status()`. Damage and stun: `set_damage_and_piyo()`. Damage dispatch: `plef_at_vs_player_damage_union()`. |
+| `HITPLPL.c`, `HITPLEF.c`, `HITEFPL.c`, `HITEFEF.c` | Hit resolution for each pairing: player/player, player/effect, effect/player, effect/effect |
+
+**Display only (no gameplay values):** `spgauge.c` (super meter HUD, struct `SPG_DAT`), `VITAL.c` (health bar), `stun.c` (stun bar).
+
+**CPU opponent only:** `Com_Pl.c`, `Com_Sub.c`, `Ck_Pass.c`, `passNN.c`. (`Com_Data.c` also holds the player health table.)
+
+### 3.4 Frame data is not in the repository
+
+The per-move data lives in each character's data on the **disc**, and is loaded at runtime. That covers animation frames and their timing (startup, active, recovery), hit, hurt, throw and push boxes, cancel windows, and each attack's damage, stun and meter indexes.
+
+- `CHARID.c:set_char_base_data()` points `WORK` at it through `char_init_data[charset_id]`. That includes `char_table[]` (the animation chains), `hit_ix_table`, `body_adrs`, `hand_adrs`, `catch_adrs`, `caught_adrs`, `attack_adrs`, `hosei_adrs` and `att_ix_table`.
+- `CHARSET.c` (`setupCharTableData()`, `check_cm_extended_code()`) runs the chains frame by frame. Each frame sets fields such as `WORK.cg_hit_ix` and `WORK.cg_cancel`, and the frame's attack fields (`att.piyo`, `add_arts_point`, …) are copied out as it loads.
+
+Changing any of this needs a patch applied after the character loads (or a patched disc), not an edit to a C table. Most character items in the spec are of this kind. Specials are not named in the source: a move is found through its command in `cmd_data.c` and the assignment table in `bin2obj/asstbl.c`.
 
 ---
 
-## 4. "Third Strike Upper (3s')" Balance Specification
+## 4. "Third Strike Upper (3s')" Specification
 
-Every change below must be cleanly implemented in the corresponding C source file:
+The specification is Mike Z's post (linked in §1). It is the only source for *what* changes.
 
-### 4.1 System-Wide Mechanics & Bugfixes
-1. **Universal Throw Invulnerability (`Com_Sub.c`, `HITPLPL.c`)**:
-   - Make all successful throw animations 100% invulnerable throughout their duration to eliminate legacy glitches (specifically the **Remy/Urien glitch** and **Q throw bug**).
-2. **Whiffed Normal Meter Building (`spgauge.c`)**:
-   - Standardize whiff meter gain to prevent abusive out-of-range meter farming while preserving zoning incentives.
-3. **Charge Partitioning Determinism**:
-   - Eliminate random charge loss timers so charge partitioning behaves with 100% deterministic precision.
-
-### 4.2 Top-Tier Rebalancing
-1. **Yun (`PLS02.c`, `spgauge.c`)**:
-   - **Genei Jin (SAIII)**: Remove the automatic Super priority flag on normals (normals during Genei Jin no longer crush opponent normals/specials on trade).
-   - **Meter Length**: Increase Genei Jin meter length to match *Sourai Rengeki* (SAI) while keeping active timer duration intact.
-2. **Chun-Li (`PLS14.c`, `spgauge.c`)**:
-   - **Houyoku-sen (SAII)**: Reduce stock count from **2 stocks down to 1 stock**.
-   - **Crouching Forward (c.MK)**: Tighten the late super-cancel buffer window to prevent super-late hit-confirms after hitstop finishes.
-3. **Ken (`PLS10.c`, `spgauge.c`)**:
-   - **Shippu Jinrai Kyaku (SAIII)**: Reduce stocks from **3 down to 2**; reduce base damage by 15%.
-   - **Jab Dragon Punch (`623LP`)**: Lower damage from 15 to 11.5 (prevents double Jab DP combo from eclipsing Strong DP).
-4. **Makoto (`PLS15.c`)**:
-   - **Abare Tosanami (SAII)**: Reduce stun damage by 50%.
-   - **Fukiage (`623P`)**: Tone down stun on Light, Medium, and Heavy Fukiage to eliminate degenerate 100% stun loops.
-
-### 4.3 Low-Tier & Cast Viability Buffs
-1. **Sean (`PLS11.c`, `PASS11.c`)**:
-   - **Normals on Hit**: Increase hitstun on close/far Fierce, c.HP, s.MK, far HK, c.MK, and 6HP so they are no longer negative on hit.
-   - **Sean Roll (`214P`)**: Allow Super-cancelling midway through the roll animation.
-   - **Ryuubi Kyaku (`236K`)**: Decrease startup frames (Light: 17f, Medium: 19f, Heavy: 21f); Roundhouse version causes hard knockdown.
-2. **Twelve (`PLS17.c`, `spgauge.c`)**:
-   - **X.C.O.P.Y. (SAIII)**: Startup reduced from 12 frames to **1 frame**; allow spending remaining super gauge to execute EX moves; damage taken during recovery reduced to 66% (remove damage amplification penalty).
-3. **Remy (`PLS18.c`, `stun.c`)**:
-   - **Stun Bar**: Upgrade stun bar from "Short" to "Regular".
-   - **Crouching Strong (c.MP)**: Increase base damage by +6 to match standard shoto damage.
-   - **Close Fierce (s.HP)**: Fix early active frames so they properly knock down airborne opponents.
-4. **Alex (`PLS00.c`)**:
-   - **Air Knee Smash (`623K`)**: Standard versions (Light, Medium, Heavy) made **un-air-parryable** (restoring their role as functional anti-air specials).
-   - **Boomerang Raid (SAI)**: Increase forward tracking on middle hits and extend final grab reach to prevent whiffing on hit.
-5. **Oro (`PLS08.c`, `Com_Sub.c`)**:
-   - **Forward Throw**: Add standard forward throw (`6 + LP + LK`) mirroring back-throw animation.
-   - **Chicken Kick Loop**: Normalize pushboxes so `[s.MP xx Chicken Kick]` loops connect consistently across the entire cast.
-   - **Oniyama (`[2]8P`)**: Increase hitstop and juggle window to make super-cancelling practical.
+- **The itemised list is [`docs/upper3s/remaining.md`](docs/upper3s/remaining.md).** It covers every item of the post (five system mechanics, the character items for 19 characters, and seven additional bugfixes), with where each change has to be made and its status. Work from that list, and update its status columns in the same commit as the change.
+- **Read the post's own wording before implementing an item.** An earlier version of this section paraphrased about a third of the post and got items wrong. The post makes *all* versions of Alex's Air Knee Smash un-air-parryable (EX stays ground-parryable). X.C.O.P.Y.'s EX moves spend the super's *timer*, not gauge. Houyoku-sen also gets the longest bar in the game. Yun's Sourai Rengeki is SA II (and goes from 3 stocks to 2).
+- The post is organised as system mechanics, characters, and additional bugfixes. It does not group characters by tier.
+- Where a number in the post disagrees with the retail data, record both values and the reason for the one used, next to the change.
 
 ---
 
 ## 5. Build & Verification Gates
 
-### 5.1 Verification Checklist
-Before committing any changes to `main`:
-1. **Mandatory Functional Test (Per User Request)**:
-   - An automated test specifically verifying the requested functionality must be added/executed and pass 100%.
-2. **Compilation Check**:
-   - Code must compile cleanly with `-Werror` compatibility against CodeWarrior and GCC targets without syntax errors or mismatched prototypes.
-3. **Data Structure Integrity**:
-   - Ensure `sizeof(PLW)`, `sizeof(WORK)`, and `sizeof(GAUGE)` offsets remain 100% aligned with PS2 memory maps.
-4. **Feature Cleanliness**:
-   - Wrap modifications with `#ifdef UPPER_3S` / `#ifndef UPPER_3S` guards where appropriate so vanilla matching builds remain reproducible.
+### 5.1 What the build is today
+- `make build` produces a PS2 ELF and **fails unless it matches the retail `THIRD_U.BIN` byte for byte** (`tools/compare_bytes.py`). It needs your own `THIRD_U.BIN` in the repository root, `make setup_tools`, `make split`, and initialised submodules (`git submodule update --init`). See `docs/builde-guide.md`.
+- CRI middleware is compiled with EE GCC 2.96. Everything else, game code included, is compiled with CodeWarrior (`mwccps2`, run through `wibo` and `mwccgap`). There is no host/PC build: upstream removed the port (#303).
+- Nothing in the Makefile defines `UPPER_3S`, and there is no non-matching build target. Until both exist, no 3s' build can be produced. This is the first infrastructure item in `docs/upper3s/remaining.md`.
+
+### 5.2 Checklist before committing
+1. **Functional test (§2.2):** an automated test for the change must exist and pass. There is no test harness on `main` yet; the first change that needs one adds it.
+2. **The vanilla build stays matching:** with `UPPER_3S` off, `make build` must still print `Files match ✅`. Every change to a shared file goes behind `#if defined(UPPER_3S)` / `#if !defined(UPPER_3S)`.
+3. **Struct layout:** `PLW` is 0x46C bytes, `WORK` 0x388, `SA_DATA` 0x10 and `SPG_DAT` 0x34; the field offsets are commented in `include/structs.h` and the headers. Do not change them. Keep 3s' state in separate structures. (There is no `GAUGE` struct.)
+4. **Compiler:** game code must compile under `mwccps2` with the Makefile's flags. There is no GCC target for game code.
+5. **This file:** after editing §3, run `python3 tools/check_agents_md.py`.
