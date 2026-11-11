@@ -1,3 +1,5 @@
+// Draws the health bars. Health values are in Com_Data.c:Com_Vital_Unit_Data; damage in Pow_Pow.c.
+
 #include "sf33rd/Source/Game/VITAL.h"
 #include "common.h"
 #include "sf33rd/Source/Game/PLCNT.h"

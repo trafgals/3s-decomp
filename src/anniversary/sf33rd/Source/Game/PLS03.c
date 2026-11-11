@@ -1,3 +1,5 @@
+// Shared by every character: special and super command checks, universal overhead and taunt input.
+
 #include "sf33rd/Source/Game/PLS03.h"
 #include "bin2obj/asstbl.h"
 #include "common.h"

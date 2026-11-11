@@ -1,3 +1,6 @@
+// Shared by every character (there are no per-character PLSxx.c files): the normal-state machine (nm_*),
+// lever checks and cancel checks (check_cg_cancel_data()).
+
 #include "sf33rd/Source/Game/PLS00.h"
 #include "common.h"
 #include "sf33rd/Source/Game/CHARSET.h"

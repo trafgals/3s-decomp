@@ -29,8 +29,10 @@ ROOT = Path(__file__).resolve().parent.parent
 ANNIV = ROOT / "src" / "anniversary"
 GAME = ANNIV / "sf33rd" / "Source" / "Game"
 
-# Paths in remaining.md that only exist on the PR #1 branch.
+# Paths in remaining.md that only exist on the PR #1 branch. remaining.md cites them to say what that
+# branch contains, so their absence here is expected, not an error.
 PR_ONLY_PREFIXES = ("upper3s/", "tests/", "tools/upper3s", "tools/verify", "docs/upper3s/spec-map.md")
+# The "Kind" column vocabulary of remaining.md (defined in its "How to read this" section).
 KINDS = {"table", "logic", "disc", "new", "find", "none"}
 
 failures = []
@@ -58,6 +60,8 @@ def text(path):
 
 def resolve(name):
     """A file name as the docs write it -> its path, or None."""
+    # The docs write repo paths ("tools/x.py"), paths under src/anniversary ("bin2obj/gauge.c") and bare
+    # Game/ file names ("PLCNT.c"), so try the three roots in that order.
     for base in (ROOT, ANNIV, GAME):
         p = base / name
         if p.is_file():
@@ -156,6 +160,8 @@ def spans(line):
     return re.findall(r"`([^`]+)`", line)
 
 
+# Spans that name a family rather than one thing (`passNN.c`, `plpatNN.c`, `PLSxx.c`, `nm_*`,
+# `add_sp_arts_gauge_*()`, `pX_cmd`) can't be looked up, so they are skipped.
 PLACEHOLDER = re.compile(r"NN|xx|\*|…|pX_cmd")
 
 
@@ -206,10 +212,15 @@ def index_map(md):
 
 
 def check_index_map(md, chars):
+    # The game never lists its characters by name in one place, so the order is checked against two
+    # independent tables that happen to be in index order:
+    #   Ck_Pass.c:Passive_AS_tbl  CPU tables VS_GILL_AS, VS_ALEX_AS, ... (Yang reuses VS_YUN_AS at 10)
+    #   Eff99.c:Letter_Data_99[4] "ALEX STAGE", ... "REMY STAGE" (blank for Gill 0 and Q 17)
+    # Every index is covered by at least one of them, and both must agree with the doc where they name someone.
     check(sorted(chars) == list(range(20)), f"AGENTS.md 3.1: the map has {len(chars)} entries, not 0..19")
     ck = [m for m in re.findall(r"VS_(\w+?)_AS\b", initializer(GAME / "Ck_Pass.c", "Passive_AS_tbl"))]
     groups = re.findall(r"\{([^{}]*)\}", initializer(GAME / "Eff99.c", "Letter_Data_99"))
-    stages = re.findall(r'"([^"]*)"', groups[4])
+    stages = re.findall(r'"([^"]*)"', groups[4])  # row 4 is the "<character> STAGE" row
     check(len(ck) == 20 and len(stages) >= 20, "Ck_Pass.c / Eff99.c tables did not parse")
     for i in range(20):
         name = chars.get(i, "?")
@@ -242,6 +253,8 @@ def check_numbering(md, chars):
     m = re.search(r"`pass(\d\d)\.c` is (\w+)", s32)
     check(m and int(m.group(1)) == idx.get(m.group(2)), "AGENTS.md 3.2: the passNN.c example does not match the index")
 
+    # plpat files: the dispatch table has no pl15_extra_attack, so from Chun-Li
+    # (index 15) on the file number is index + 1. Issue #2 of the repository got this wrong.
     ext = re.findall(r"\w+", initializer(GAME / "PLPAT.c", "plxx_extra_attack_table"))
     for i in range(20):
         n = i if i < 15 else i + 1
@@ -255,6 +268,7 @@ def check_numbering(md, chars):
         check(i is not None and ext[i] == f"pl{nn}_extra_attack" and f and defines(f, f"pl{nn}_extra_attack"),
               f"AGENTS.md 3.2: {who} is not plpat{nn}.c")
 
+    # Command tables are named in hex but skip F: p0..p9, pA..pE (0-14), then p10..p14 (15-19).
     cmd = re.findall(r"\w+", initializer(GAME / "cmd_data.c", "pl_cmd"))
     want = [f"p{i}_cmd" for i in range(10)] + [f"p{c}_cmd" for c in "ABCDE"] + [f"p1{i}_cmd" for i in range(5)]
     check(cmd[:20] == want, f"cmd_data.c: pl_cmd order is {cmd[:20]}")
@@ -264,6 +278,9 @@ def check_numbering(md, chars):
 
 
 def sa_table(name="super_arts_data"):
+    """The SA_DATA rows of a table, and the positions of gauge_len and store_max in each row.
+    The positions are read from the struct in PLCNT.h rather than hard-coded, so a reordered or renamed
+    field fails loudly instead of silently reading the wrong column."""
     fields = re.findall(r"\b(\w+);\s*//", re.search(r"typedef struct \{(.*?)\}\s*SA_DATA;",
                         text(ROOT / "include/sf33rd/Source/Game/PLCNT.h"), re.S).group(1))
     rows = int_rows(initializer(GAME / "PLCNT.c", name))
@@ -274,6 +291,8 @@ def check_tables(md, chars):
     idx = {n.split(" (")[0]: i for i, n in chars.items()}
     rows, gl, sm = sa_table()
     check(len(rows) == 80, f"super_arts_data has {len(rows)} entries, not 80")
+    # Known retail values that only line up under the right index order: Shippu Jinrai Kyaku (Ken SA III)
+    # has 3 stocks; Akuma and Remy are the only short stun bars.
     check(rows[idx["Ken"] * 4 + 2][sm] == 3, "super_arts_data: Ken's SA III does not have 3 stocks")
     check(re.search(r"if \(cmd_sel\[ix\] \|\| no_sa\[ix\]\) \{\s*saptr = &super_arts_DATA", text(GAME / "PLCNT.c")),
           "PLCNT.c: super_arts_DATA is not chosen by cmd_sel[ix] || no_sa[ix]")
@@ -330,6 +349,8 @@ def check_build(md):
     all_src = "\n".join(text(p) for p in list((ROOT / "include").rglob("*.h")) + list(ANNIV.rglob("*.c")))
     check(not re.search(r"\}\s*GAUGE\s*;", all_src), "a GAUGE struct exists")
 
+    # These "not yet" checks are meant to start failing: once someone adds an UPPER_3S build or a tests/
+    # directory, AGENTS.md 5 and remaining.md I1/I3 are out of date and must be updated with the change.
     mk = text(ROOT / "Makefile")
     check("UPPER_3S" not in mk, "the Makefile mentions UPPER_3S: update AGENTS.md 5.1 and remaining.md I1")
     check(re.search(r"\$\(COMPARE_BYTES\) \$\(MAIN\) \$\(MAIN_TARGET\)", mk), "the build no longer byte-compares")
@@ -361,6 +382,10 @@ def check_remaining(md, chars):
     piyo = int_rows("{" + initializer(GAME / "PLCNT.c", "pl_piyo_tbl") + "}")[0]
 
     ids, items = set(), []
+    # heading_char is the character whose "### Name (index)" section we are in. A table reference
+    # (super_arts_data[c], pl_piyo_tbl[c], Com_Vital_Unit_Data[c], plpatNN.c) under a character's heading
+    # must index that character: putting one character's change in another's data is exactly the mistake
+    # PR #1 made with Remy's Cold Blue Kick.
     heading_char = None
     seen_chars = set()
     for lineno, line in enumerate(md.splitlines(), 1):
@@ -384,6 +409,8 @@ def check_remaining(md, chars):
             status = c[-1].split()[0] if c[-1] else ""
             check(status in {"done", "partial", "—", "n/a"}, f"remaining.md:{lineno}: unknown status '{c[-1]}'")
             items.append(("none" in kinds, status))
+        # "`super_arts_data[c][s]` 104/2 → 128/1": the value before the arrow is the claimed retail value
+        # (length/stocks) and must match the table; the target after it is the spec's and isn't checked.
         for a, s, cur_len, cur_stk in re.findall(r"`super_arts_data\[(\d+)\]\[(\d)\]` (\d+)(?:/(\d+))?", line):
             row = rows[int(a) * 4 + int(s)]
             check(row[gl] == int(cur_len), f"remaining.md:{lineno}: super_arts_data[{a}][{s}] length is {row[gl]}, not {cur_len}")

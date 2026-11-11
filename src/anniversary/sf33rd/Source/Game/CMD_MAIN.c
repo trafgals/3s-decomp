@@ -121,6 +121,11 @@ void cmd_move() {
     }
 }
 
+// Starts a command: skips its 12-word header and loads the first step. A step is four words: type (w_type, an
+// index into chk_move_jp, so type 1 runs check_0(), type 2 check_1(), ... type 11 check_10()), timer (w_int),
+// hold count (into both free1 and free2) and lever mask (w_lvr). A next step of type 28 (0x1C) means the
+// command is complete (command_ok()). Setting w_type back to 0 brings the command here again, which restarts
+// it from the first step with a fresh timer.
 void check_init() {
     cmd_tbl_ptr += 12;
     waza_ptr->w_type = *cmd_tbl_ptr++;
@@ -195,6 +200,15 @@ void check_0() {
     }
 }
 
+// Charge ("tame") step on the lever. While the direction in w_lvr is held, a hold count runs down, and when it
+// passes zero the charge is complete (tame.flag); releasing then moves on to the next step. While the
+// direction is not held, w_int counts down, and when it runs out the command restarts.
+// Without 0x8000 (e.g. back, which down-back also satisfies), the count is free1 and it is kept across
+// releases, so a charge can be built in parts: charge partitioning. How long a release may last is whatever
+// is left of w_int, and w_int is only reloaded when the command restarts. That leftover is the "random"
+// partition timer of the 3s' spec (SM4).
+// With 0x8000 (that exact direction) the count is free2, which a release reloads from free1, so the charge
+// starts over.
 void check_1() {
     if (dead_lvr_check() == 0) {
         sw_work = waza_ptr->w_lvr & 0xF;
@@ -256,6 +270,9 @@ void check_1() {
     }
 }
 
+// Charge step on every bit of w_lvr at once (from chk_pl->sw_new). Like check_1() with 0x8000: a release
+// reloads the count (free2 = free1), so this charge cannot be partitioned. Letting go of everything after
+// the charge is complete moves on to the next step.
 void check_2() {
     sw_work = chk_pl->sw_new & waza_ptr->w_lvr;
 
@@ -607,6 +624,8 @@ void paring_miss_init() {
     wcp[cmd_id].waza_flag[waza_type[cmd_id]] = 0;
 }
 
+// The parry input (step type 11, used by the shared commands pc_cmd_03..06 in cmd_data.c): the lever returns to
+// neutral, then is tapped to w_lvr. Command slots 5 and 6 (the air parries) only count while airborne.
 void check_10() {
     switch (waza_ptr->shot_ok) {
     case 0:

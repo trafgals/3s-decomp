@@ -673,6 +673,8 @@ void Com_Follow(PLW* wk) {
 }
 
 void Com_Passive(PLW* wk) {
+    // CPU opponent AI: one passNN.c per character, numbered by character index (pass16.c is Makoto). These
+    // files hold CPU behaviour patterns only, no frame data, hitboxes or damage.
     void (*Passive_Jmp_Tbl[20])(PLW*) = { Passive00, Passive01, Passive02, Passive03, Passive04, Passive05, Passive06,
                                           Passive07, Passive08, Passive09, Passive10, Passive11, Passive12, Passive13,
                                           Passive14, Passive15, Passive16, Passive17, Passive18, Passive19 };

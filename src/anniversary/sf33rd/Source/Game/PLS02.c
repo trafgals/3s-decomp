@@ -1,3 +1,5 @@
+// Shared by every character: movement data, super meter gain (add_sp_arts_gauge_*()) and health setup.
+
 #include "sf33rd/Source/Game/PLS02.h"
 #include "bin2obj/gauge.h"
 #include "common.h"
@@ -779,6 +781,8 @@ s16 get_kind_of_trunk_dm(s16 dir, s8 drl) {
     return dir16_trdm[dir];
 }
 
+// pno is the character index. The health comes from Com_Data.c:Com_Vital_Unit_Data, which is the health
+// table of every player despite its name.
 void setup_vitality(WORK* wk, s16 pno) {
     s16 ix;
 
@@ -842,6 +846,9 @@ void set_hit_stop_hit_quake(WORK* wk) {
     }
 }
 
+// Meter gain when an attack starts, whether or not it connects: this is the whiff gain. Column 0 of
+// bin2obj/gauge.c:_add_arts_gauge. Called from CHARSET.c:set_new_attnum() as each frame with attack data
+// loads. For an effect (work_id != 1, e.g. a projectile) the gain goes to its owner, wk->cp.
 void add_sp_arts_gauge_init(PLW* wk) {
 #if defined(TARGET_PS2)
     void add_super_arts_gauge(SA_WORK * wk, s32 ix, s32 asag, u16 mf);
@@ -863,6 +870,8 @@ void add_sp_arts_gauge_init(PLW* wk) {
     }
 }
 
+// Meter gain for the attacker when the attack is blocked: column 1 of _add_arts_gauge. Called from
+// HITCHECK.c:set_guard_status(). Not the whiff gain, which is add_sp_arts_gauge_init().
 void add_sp_arts_gauge_guard(PLW* wk) {
 #if defined(TARGET_PS2)
     void add_super_arts_gauge(SA_WORK * wk, s32 ix, s32 asag, u32 mf);
@@ -884,6 +893,9 @@ void add_sp_arts_gauge_guard(PLW* wk) {
     }
 }
 
+// Meter gain on a hit: column 2 of _add_arts_gauge, row = the meter row of the attack that hit (dm_arts_point),
+// table = the attacker's character. wk is the player who was hit and gets a third of it; the attacker
+// (wk->wu.target_adrs) gets the full value, adjusted for CPU difficulty and by cal_sa_gauge_waribiki().
 void add_sp_arts_gauge_hit_dm(PLW* wk) {
 #if defined(TARGET_PS2)
     void add_super_arts_gauge(SA_WORK * wk, s32 ix, s32 asag, u32 mf);
@@ -945,6 +957,8 @@ s16 cal_sa_gauge_waribiki(PLW* wk, s16 asag) {
     return asag;
 }
 
+// Meter gain on a parry: column 3 of _add_arts_gauge (attacker's character, the parried attack's meter row),
+// paid to wk, the player who parried.
 void add_sp_arts_gauge_paring(PLW* wk) {
 #if defined(TARGET_PS2)
     void add_super_arts_gauge(SA_WORK * wk, s32 ix, s32 asag, u16 mf);

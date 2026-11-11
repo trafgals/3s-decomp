@@ -171,6 +171,11 @@ typedef struct {
     s16 hos_box[4]; // offset 0x0, size 0x8
 } UNK_6;
 
+// The attack data of a move (WORK.att), one entry of the character's att_ix_table, which is loaded from disc.
+// pow indexes POW_DATA.c:Power_Data (the damage). piyo packs two indexes (CHARSET.c:set_new_attnum() splits
+// them): the high nibble is the meter row of bin2obj/gauge.c:_add_arts_gauge, the low nibble the stun index
+// into _add_piyo_gauge. HITCHECK.c:dm_status_copy() copies impact to the defender's dm_impact (knockback),
+// hs_you to the defender's dm_stop and hs_me to the attacker's hit_stop.
 typedef struct {
     // total size: 0x10
     u8 reaction; // offset 0x0, size 0x1

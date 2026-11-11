@@ -959,9 +959,14 @@ void set_damage_and_piyo(PLW* as, PLW* ds) {
 #endif
 
     cal_damage_vitality(as, ds);
+    // Stun: the attacker's row of _add_piyo_gauge, at the attack's stun index (the low nibble of its piyo
+    // byte; the high nibble was split off as the meter row in CHARSET.c:set_new_attnum()).
     ds->wu.dm_piyo = _add_piyo_gauge[as->player_number][as->wu.att.piyo];
     ds->wu.dm_piyo = ds->wu.dm_piyo * stun_gauge_omake[omop_stun_gauge_add[(ds->wu.id + 1) & 1]] / 32;
 
+    // +25% damage when the defender's pat_status is 32, 3 or 25. The source does not name these states.
+    // 25% is the size of the "crouching damage bonus" that the 3s' spec's parry change (SM2) reuses, so
+    // this may be it; unconfirmed.
     if ((ds->wu.pat_status == 32 || ds->wu.pat_status == 3) || ds->wu.pat_status == 25) {
         ds->wu.dm_vital = (ds->wu.dm_vital * 125) / 100;
     } else if (ds->wu.pat_status == 7 || ds->wu.pat_status == 23 || ds->wu.pat_status == 35) {

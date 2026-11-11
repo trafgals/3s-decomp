@@ -40,6 +40,7 @@ For **every single user request**, the agent **MUST** write and execute an autom
 - **Zero Background Polling**: Never run busy-wait loops, sleep loops, or status-polling scripts in shells or subagents. Rely on reactive system notifications when commands complete.
 - **Always Ship on `main`**: Working trees must be left clean and synchronized with `origin/main`.
 - **Preserve Documentation & Comments**: Maintain existing Japanese Capcom comments and naming conventions. Do not delete explanatory context.
+- **Comment What You Work Out**: When you establish something non-obvious about the code (what a table is indexed by, which function does what, a numbering quirk, what a packed field holds), write it as a short comment where it applies in the source, as well as in the docs. Say what is confirmed and what is a guess. Comments do not change the matching build; `tools/check_comments_only.py` proves an edit is comment-only.
 
 ---
 
@@ -101,7 +102,7 @@ There are **no per-character `PLSxx.c` files**. `PLS00.c`–`PLS03.c` are shared
 | `PLS03.c` | Special and super command checks (`hissatsu_setup_union()`, `check_super_arts_attack()`); universal overhead and taunt input (`check_leap_attack()`, `check_chouhatsu()`) |
 | `PLPNM.c`, `PLPDM.c`, `PLPCA.c`, `PLPCU.c` | Player state routines: normal, damage, throwing (`Player_catch()`, and the throw tech `check_nagenuke()`), being thrown (`Player_caught()`) |
 | `PLPAT.c`, `PLPATUNI.c` | Attack-state dispatch, and special-move routines shared by several characters (`Att_HADOUKEN`, …) |
-| `CMD_MAIN.c` | Command interpreter: motion checks (`check_0()`, …); charge (`tame`) in `check_1()`/`check_2()`; input timers `waza_work[][].w_int` (declared in `cmd_data.c`); parry input (`paring_miss_init()`) |
+| `CMD_MAIN.c` | Command interpreter: motion checks (`check_0()`, …); charge (`tame`) in `check_1()`/`check_2()`; input timers `waza_work[][].w_int` (declared in `cmd_data.c`); the parry input `check_10()` (parries are the shared command slots 3–6 in `cmd_data.c`) |
 
 **Combat**
 
@@ -145,7 +146,7 @@ The specification is Mike Z's post (linked in §1). It is the only source for *w
 
 ### 5.2 Checklist before committing
 1. **Functional test (§2.2):** an automated test for the change must exist and pass. There is no test harness on `main` yet; the first change that needs one adds it.
-2. **The vanilla build stays matching:** with `UPPER_3S` off, `make build` must still print `Files match ✅`. Every change to a shared file goes behind `#if defined(UPPER_3S)` / `#if !defined(UPPER_3S)`.
+2. **The vanilla build stays matching:** with `UPPER_3S` off, `make build` must still print `Files match ✅`. Every change to a shared file goes behind `#if defined(UPPER_3S)` / `#if !defined(UPPER_3S)`. For a comment-only edit, `python3 tools/check_comments_only.py` proves the same thing without the game file: it compares what the compiler sees before and after.
 3. **Struct layout:** `PLW` is 0x46C bytes, `WORK` 0x388, `SA_DATA` 0x10 and `SPG_DAT` 0x34; the field offsets are commented in `include/structs.h` and the headers. Do not change them. Keep 3s' state in separate structures. (There is no `GAUGE` struct.)
 4. **Compiler:** game code must compile under `mwccps2` with the Makefile's flags. There is no GCC target for game code.
 5. **This file:** after editing §3, run `python3 tools/check_agents_md.py`.

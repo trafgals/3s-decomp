@@ -1,3 +1,6 @@
+// Draws the super art gauge. The gameplay values are elsewhere: bar length and stocks in
+// PLCNT.c:super_arts_data, meter gain in PLS02.c and bin2obj/gauge.c.
+
 #include "sf33rd/Source/Game/spgauge.h"
 #include "common.h"
 #include "sf33rd/Source/Game/PLCNT.h"

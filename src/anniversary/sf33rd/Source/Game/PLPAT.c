@@ -823,6 +823,9 @@ void (*const plpat_lv_00[16])(PLW* wk) = { Attack_00000, Attack_01000, Attack_02
                                            Attack_08000, Attack_09000, Attack_10000, Attack_00000,
                                            Attack_00000, Attack_00000, Attack_14000, Attack_15000 };
 
+// Character-specific attack code, by character index (PLW.player_number). The files are numbered by the
+// index for 0-14 and by index + 1 from 15 on, with no file numbered 15: Chun-Li (15) is plpat16.c, Makoto
+// plpat17.c, Q plpat18.c, Twelve plpat19.c, Remy plpat20.c.
 void (*const plxx_extra_attack_table[])() = {
     pl00_extra_attack, pl01_extra_attack, pl02_extra_attack, pl03_extra_attack, pl04_extra_attack,
     pl05_extra_attack, pl06_extra_attack, pl07_extra_attack, pl08_extra_attack, pl09_extra_attack,

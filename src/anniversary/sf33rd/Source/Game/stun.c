@@ -1,3 +1,5 @@
+// Draws the stun bars. Stun bar sizes are in PLCNT.c:pl_piyo_tbl; stun per hit in bin2obj/gauge.c.
+
 #include "sf33rd/Source/Game/stun.h"
 #include "common.h"
 #include "sf33rd/Source/Game/PLCNT.h"

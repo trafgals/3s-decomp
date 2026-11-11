@@ -2,6 +2,9 @@
 
 // data
 
+// Health of every player, human or CPU, despite the Com prefix: [character index][Damage_Level setting]
+// [column]. PLS02.c:setup_vitality() reads column 2 for a human player (wk->operator set) and column
+// CC_Value[1] + the Difficulty setting for a CPU.
 s16 Com_Vital_Unit_Data[20][4][12] = { { { 1593, 1687, 1781, 1875, 1968, 2062, 2156, 2250, 2343, 2437, 2531, 2625 },
                                          { 1062, 1125, 1187, 1250, 1312, 1375, 1437, 1500, 1562, 1625, 1687, 1750 },
                                          { 929, 983, 1038, 1093, 1147, 1202, 1256, 1311, 1366, 1420, 1475, 1530 },

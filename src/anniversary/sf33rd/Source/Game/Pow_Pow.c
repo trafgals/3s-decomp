@@ -4,6 +4,9 @@
 #include "sf33rd/Source/Game/POW_DATA.h"
 #include "sf33rd/Source/Game/workuser.h"
 
+// Damage of a hit: Power_Data[att.pow] (att.pow is the move's damage index, from the attack data loaded from
+// disc), times the round's Pow_Control_Data_1 percentage, then the attacker's att_plus/8 and the defender's
+// def_plus/8. The callers apply further scaling (e.g. HITCHECK.c:set_damage_and_piyo()).
 void cal_damage_vitality(PLW* as, PLW* ds) {
     u16 xx = as->wu.att.pow;
     s16 yy;
