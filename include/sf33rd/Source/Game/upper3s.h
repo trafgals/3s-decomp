@@ -203,6 +203,7 @@ typedef struct {
 #define U3S_MV_STARTUP 0x80       /* the startup of the move, in game frames */
 #define U3S_MV_RECOVERY 0x100     /* the recovery of the move, in game frames */
 #define U3S_MV_TAIL 0x200         /* the game frames from `tail_at` to the end of the move */
+#define U3S_MV_FRAME 0x400        /* one field of the frame that starts at `frame_at` */
 
 typedef struct {
     s16 koc;
@@ -244,7 +245,41 @@ typedef struct {
     s16 tail_at;
     s16 tail_from;
     s16 tail;
+    /*
+     * U3S_MV_FRAME: the frame of the straight line of the chain that starts at
+     * the game frame `frame_at` of the move holds `frame_from` in its field
+     * `frame_field` (U3S_FRAME_*) in the retail data and gets `frame_to`
+     * (upper3s_chain_set_frame()). Rows that do not use it leave the four
+     * fields out. One row changes one field of one frame.
+     */
+    s16 frame_at;
+    s16 frame_field;
+    s16 frame_from;
+    s16 frame_to;
 } Upper3sMove;
+
+/*
+ * The fields of a frame of a chain that U3S_MV_FRAME can change (the words of a
+ * frame are copied into WORK from cg_type on, CHARSET.c:setupCharTableData()).
+ */
+enum {
+    /*
+     * cg_att_ix, the attack index, signed as CHARSET.c:set_new_attnum() reads it:
+     * negative starts a new attack (it arms the hit, att_hit_ok, and pays the whiff
+     * meter gain), positive only reloads the attack data of the attack under way,
+     * 0 is a frame with no attack data, whose attack boxes cannot hit.
+     */
+    U3S_FRAME_ATTACK = 1,
+    /*
+     * cg_extdat, what a hit does to the chain (HITCHECK.c:hit_pattern_extdat_check()):
+     * 0x80 goes to the next frame at once, 0x40 ends the frame on the next game
+     * frame, 0x80 | k jumps to block k - 1 of the animation (0x40 | k and k too,
+     * after the frame ends), 0 nothing.
+     */
+    U3S_FRAME_EXTDAT = 2,
+    /* cg_cancel, the cancel bits of the frame (upper3s_cancel.h). */
+    U3S_FRAME_CANCEL = 3
+};
 
 /* Per character override tables. Defined by upper3s/plXX.c. */
 extern const Upper3sMove* upper3s_moves[U3S_CHAR_COUNT];

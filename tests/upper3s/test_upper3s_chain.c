@@ -529,6 +529,58 @@ int main(void) {
         check(upper3s_chain_set_tail(&chain, at, total, (s16)(total - 1)) == 1, "a tail that already holds the target counts as done");
     }
 
+    /* One field of one frame (U3S_MV_FRAME): the attack index, the on-hit jump, the cancel bits. */
+    {
+        Upper3sFrame frames[U3S_CHAIN_MAX_FRAMES];
+        s32 n;
+        s32 i;
+        s16 at = 0;
+        s32 k = -1;
+        u32* w2;
+        u32* w3;
+
+        setup_chains(U3S_SEAN);
+        setup_character(&wk);
+        check(upper3s_chain_open(&wk.wu, U3S_KOC_ATTACK, 32, &chain) == 1, "the chain opens for a frame field");
+        n = upper3s_chain_list(&chain, frames, U3S_CHAIN_MAX_FRAMES);
+
+        for (i = 0; i < n; i++) {
+            if (frames[i].att == 0 && i > 0) {
+                k = i;
+                break;
+            }
+
+            at = (s16)(at + frames[i].hold);
+        }
+
+        check(k > 0, "the chain has a frame without attack data after its first");
+        w2 = &chain.words[frames[k].word + 2];
+        w3 = &chain.words[frames[k].word + 3];
+        *w2 |= 0x000F0000; /* the top of the hit box index, in the low bits of the half word */
+
+        check(upper3s_chain_set_frame(&chain, at, U3S_FRAME_ATTACK, 3, -5) == 0, "a frame that does not hold `from` is left alone");
+        check(upper3s_chain_set_frame(&chain, (s16)(at + 1), U3S_FRAME_ATTACK, 0, -5) == 0 || frames[k].hold == 0,
+              "the frame must start at `at`");
+        check(upper3s_chain_set_frame(&chain, at, U3S_FRAME_ATTACK, 0, -5) == 1, "the attack index is set");
+        check(((s16)(*w2 >> 16) >> 6) == -5, "the frame starts a new attack (a negative index)");
+        check(((*w2 >> 16) & 0x3F) == 0x0F, "the low bits of the half word are kept");
+        n = upper3s_chain_list(&chain, frames, U3S_CHAIN_MAX_FRAMES);
+        check(frames[k].att == 5, "the walk reads entry 5 on the frame");
+        check(upper3s_chain_set_frame(&chain, at, U3S_FRAME_ATTACK, 0, -5) == 1, "a frame that already holds `to` counts as done");
+        check(upper3s_chain_set_frame(&chain, at, U3S_FRAME_ATTACK, -5, 5) == 1 && ((s16)(*w2 >> 16) >> 6) == 5,
+              "the index can be made positive (the attack under way goes on)");
+
+        *w3 = 0x12340000;
+        check(upper3s_chain_set_frame(&chain, at, U3S_FRAME_EXTDAT, 0, 0x85) == 1, "the on-hit jump is set");
+        check(upper3s_chain_set_frame(&chain, at, U3S_FRAME_CANCEL, 0, 0x60) == 1, "the cancel bits are set");
+        check(*w3 == 0x12346085, "the two bytes are written and the others kept");
+        check(upper3s_chain_set_frame(&chain, at, U3S_FRAME_CANCEL, 0x60, 0x100) == 0, "a byte field takes 0-255 only");
+        check(upper3s_chain_set_frame(&chain, at, 9, 0, 1) == 0, "an unknown field is refused");
+        chain.cgd = 3;
+        check(upper3s_chain_set_frame(&chain, at, U3S_FRAME_EXTDAT, 0x85, 0) == 0, "blocks of 3 words have no fourth word");
+        chain.cgd = 4;
+    }
+
     setup_chains(U3S_Q);
     setup_character(&wk);
     check(upper3s_chain_open(&wk.wu, U3S_KOC_NORMAL, 3, &chain) == 1,

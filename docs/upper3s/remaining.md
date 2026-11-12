@@ -3,7 +3,7 @@
 As of 2026-11-12. Open items are tracked as GitHub issues ([below](#github-issues)). Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
 
 <!-- summary:start -->
-**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 58 verified in a fight test, 2 done but not yet measured, 9 partial, 64 not done, 1 not needed in this version.
+**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 60 verified in a fight test, 2 done but not yet measured, 9 partial, 62 not done, 1 not needed in this version.
 <!-- summary:end -->
 
 ## How to read this
@@ -34,7 +34,7 @@ As of 2026-11-12. Open items are tracked as GitHub issues ([below](#github-issue
 | I1 | A 3s' build | **Done on this branch** for the host builds: `UPPER_3S=1` with `PLATFORM=linux`, `web` or `headless`. A 3s' PS2 ELF is not possible yet: the PS2 rule always byte-compares against `THIRD_U.BIN`. |
 | I2 | Something to play it on | **On this branch**: the SDL3 port (`PLATFORM=linux`, needs SDL3 and ffmpeg) and the WebAssembly port from PR #1, and the headless port for tests. The published site (trafgals.github.io/3s-decomp) still runs PR #1's code, without the fixes of this branch. |
 | I3 | A test harness | **Done on this branch**: `make test` (unit tests on synthetic characters) and `make match-test` (fight tests in the real engine, `tests/match/`). |
-| I4 | A way to change disc data | **On this branch** (from PR #1): `upper3s/upper3s_dump.c`, `upper3s/upper3s_chain.c`, `tools/upper3s/`. The fight tests found and this branch fixed that the hitstun/knockback overrides wrote to the wrong attack entry. The chain walker's startups agree with the spec's retail numbers on every move measured so far. Patch kinds: damage, stun, knockback, hitstun, startup, recovery, the tail of a chain from a given frame (`U3S_MV_TAIL`, for moves whose chain has no attack data), and a move's attack boxes (`upper3s/upper3s_box.c`: `upper3s_move_boxes[]` swaps a box of one move's frames for another, on a copy, so other moves sharing the box are unchanged). Not yet: hurt, throw and push boxes, cancel windows per frame (the cancel rules use the frames' own bits, their active frames and hitstops), and new moves. |
+| I4 | A way to change disc data | **On this branch** (from PR #1): `upper3s/upper3s_dump.c`, `upper3s/upper3s_chain.c`, `tools/upper3s/`. The fight tests found and this branch fixed that the hitstun/knockback overrides wrote to the wrong attack entry. The chain walker's startups agree with the spec's retail numbers on every move measured so far. Patch kinds: damage, stun, knockback, hitstun, startup, recovery, the tail of a chain from a given frame (`U3S_MV_TAIL`, for moves whose chain has no attack data), a move's attack boxes (`upper3s/upper3s_box.c`: `upper3s_move_boxes[]` swaps a box of one move's frames for another, on a copy, so other moves sharing the box are unchanged), and one field of one frame (`U3S_MV_FRAME`: the attack index, which arms an attack or continues one; the on-hit jump `cg_extdat`; the cancel bits `cg_cancel`). Not yet: hurt, throw and push boxes, and new moves. Cancel windows per frame can now be set with `U3S_FRAME_CANCEL`, frame by frame; no item uses it yet. |
 | I5 | Specials are unnamed | **On this branch** (from PR #1): `tools/upper3s/decode_cmd.py` reads `cmd_data.c` and `bin2obj/asstbl.c`. The fight tests identify a move by its effect (`koc` and `cix` in the log). |
 | I6 | Guarding the vanilla build without the game file | **On this branch** (from PR #1): `tools/verify/ps2_touched_sources.sh` compares the preprocessed PS2 sources with those of the retail-matched commit. |
 | I7 | Leftover assembly (not a blocker) | Two game functions (`MTRANS` `mlt_obj_trans_rgb_ext`, `end_20` `sea_write`) and `EFFXX`'s two effect jump tables (`effmovejptbl`, `effinitjptbl`) are still included from assembly, and 6 CRI functions are not decompiled. They link as they are. |
@@ -232,7 +232,7 @@ The post's order. The number after each name is the character index.
 | Q5 | 4HK: cancel window extends past the first active frame. | logic | verified |
 | Q6 | More hitstun on c.LK, c.MK and s.HK (s.HK is −10 on hit). | disc | verified |
 | Q7 | High Speed Barrage (slaps), all versions: change the opponent's movement on the middle hits so every hit connects. | disc | — |
-| Q8 | EX slaps: first hit's hitbox extends down, to connect on crouchers. | disc | — |
+| Q8 | EX slaps: first hit's hitbox extends down, to connect on crouchers. | disc | verified (`upper3s/upper3s_boxes.c`: the slaps are 214+P; the EX one's first slap, box set 73, missed crouching or crouch-blocking Elena, Oro and Chun-Li at every distance, and Makoto in crouching hitstun after c.LK. Its three boxes reach 4 lower, the least that connects on all 20 in each case; the other versions and the later slaps are unchanged) |
 | Q9 | New EX (PP) Total Destruction (SA III) that grabs immediately on activation. | new | — |
 | Q10 | Punch Total Destruction can't trade hits. | disc | — |
 | Q11 | QCT+P deactivates Total Destruction. **Conflicts with the retail game:** while Total Destruction is active, 236+P is already its punch attack (special 53; 236+K is the grab, 54; `cmd_data.c:p12_cmd_32`/`_33`), the "punch version" Q10 refers to. QCT is 236 in the post's own notation (MK3: "QCT+K (236K)"). Needs the designer's choice of another input. | new | — |
@@ -261,7 +261,7 @@ The post's order. The number after each name is the character index.
 | TW1 | Health 1050 → 1120. `Com_Vital_Unit_Data[18]` | table | verified |
 | TW2 | More hitstun on s.MP, far s.MP, s.HP, c.HP, s.LK, s.MK, s.HK, c.MK and 4MK, so none is negative on hit. | disc | verified |
 | TW3 | c.MP and s.MK parryable high only; c.HP and 4MK parryable low only. | disc | — |
-| TW4 | 4MK: activate the earlier low hitboxes that exist but can't connect. | disc | — |
+| TW4 | 4MK: activate the earlier low hitboxes that exist but can't connect. | disc | verified (`upper3s/pl17.c`: frame 2 of the chain had low attack boxes but no attack data, so no attack was armed on it; it now starts the attack, frame 3 continues it, and a hit on frame 2 jumps on as a hit on frame 3 does. 4MK hits once, 2 frames earlier; its on-hit advantage (0) and whiff are unchanged) |
 | TW5 | Far s.MP, s.MP and c.MP special- and super-cancellable on hit/block/parry. | logic | verified |
 | TW6 | c.MP superjump-cancellable on hit/block, like s.MK. | logic | verified |
 | TW7 | c.MK super-cancellable on hit/block/parry. | logic | verified |
@@ -327,7 +327,7 @@ No changes in the post.
 
 ## GitHub issues
 
-Every item that is not `verified` or `n/a` has an issue, under the tracking issue [#3](https://github.com/trafgals/3s-decomp/issues/3). The issues repeat the rows above, with notes on how to make the change; this file stays the source of each item's status.
+Every item that was open on 2026-11-12 has an issue (closed once the item is verified), under the tracking issue [#3](https://github.com/trafgals/3s-decomp/issues/3). The issues repeat the rows above, with notes on how to make the change; this file stays the source of each item's status.
 
 - Infrastructure: missing disc patch kinds (I4) [#4](https://github.com/trafgals/3s-decomp/issues/4), the SDL port in GitHub Actions [#5](https://github.com/trafgals/3s-decomp/issues/5), a CI completeness check [#7](https://github.com/trafgals/3s-decomp/issues/7), a 3s' PS2 build and the published web build (I1/I2) [#8](https://github.com/trafgals/3s-decomp/issues/8), doc errors [#6](https://github.com/trafgals/3s-decomp/issues/6).
 - Bugfix: B2 [#14](https://github.com/trafgals/3s-decomp/issues/14), B5 [#9](https://github.com/trafgals/3s-decomp/issues/9), B6 [#10](https://github.com/trafgals/3s-decomp/issues/10).

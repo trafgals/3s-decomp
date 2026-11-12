@@ -314,6 +314,93 @@ class RyuJoudan(unittest.TestCase):
                 self.assertEqual(bottoms(kick, "upper3s"), bottoms(kick, "vanilla"))
 
 
+class QExSlaps(unittest.TestCase):
+    # Q8 "Extend hitbox of first hit of EX High Speed Barrage downward so that it more consistently
+    # connects against crouching characters." High Speed Barrage is 214+P; the EX one is special
+    # animation 39, and its first slap uses attack box set 73 (upper3s/upper3s_boxes.c).
+    @staticmethod
+    def slaps(victim, build, hold, lead=()):
+        """Q's EX slaps (after the script lines `lead`) on `victim` holding `hold`; the rows."""
+        lines = list(lead) + [" ".join(l.split()[:2] + [hold]) for l in F.motion("214", "LP+MP")] + [f"90 5 {hold}"]
+        return F.run(lines, p1="q", p2=victim, pos=(400, 440), build=build)
+
+    @staticmethod
+    def first_slap_connects(rows):
+        """A hit (the health drops) or a block (the damage state starts) on a frame after one with the
+        first slap's box set."""
+        first = {r["f"] for r in rows if r["p"][0]["koc"] == 5 and r["p"][0]["bx"][1] == 73}
+        return any(b["f"] - 1 in first and (b["p"][1]["vit"] < a["p"][1]["vit"] or
+                                            (a["p"][1]["rno"][1] != F.RNO_DAMAGE and b["p"][1]["rno"][1] == F.RNO_DAMAGE))
+                   for a, b in zip(rows, rows[1:]))
+
+    def test_first_slap_on_crouchers(self):
+        for hold in ("2", "1"):  # crouching, crouch-blocking
+            with self.subTest(hold=hold):
+                missed = [c for c in F.CHARS if not self.first_slap_connects(self.slaps(c, "vanilla", hold))]
+                self.assertEqual(set(missed), {"elena", "oro", "chunli"})
+                self.assertEqual([c for c in F.CHARS if not self.first_slap_connects(self.slaps(c, "upper3s", hold))], [])
+
+    def test_first_slap_after_crouching_short(self):
+        # c.LK xx EX slaps (Q1 makes c.LK special-cancellable): Makoto, in crouching hitstun, is lower.
+        def after_short(victim):
+            alone = F.run(["1 2+LK 2", "60 5 2"], p1="q", p2=victim, pos=(400, 440))
+            lead = ["1 2+LK 2", f"{F.first_hit(alone) - F.press_frame(alone, 0)} 5 2"]
+            return self.first_slap_connects(self.slaps(victim, "upper3s", "2", lead))
+
+        self.assertEqual([c for c in F.CHARS if not after_short(c)], [])
+
+    def test_only_the_ex_first_slap_changes(self):
+        def bottoms(button, build):
+            rows = F.run(F.motion("214", button) + F.wait(90), p1="q", p2="ken", pos=(300, 600), build=build)
+            return [(r["p"][0]["bx"][1], r["p"][0]["aby"]) for r in rows if r["p"][0]["koc"] == 5 and r["p"][0]["aby"] >= 0]
+
+        for button in ("LP", "MP", "HP"):
+            with self.subTest(button=button):
+                self.assertEqual(bottoms(button, "upper3s"), bottoms(button, "vanilla"))
+        ex_vanilla, ex = bottoms("LP+MP", "vanilla"), bottoms("LP+MP", "upper3s")
+        self.assertEqual({a for s, a in ex_vanilla if s == 73}, {59})
+        self.assertEqual({a for s, a in ex if s == 73}, {55})
+        self.assertEqual([x for x in ex if x[0] != 73], [x for x in ex_vanilla if x[0] != 73])
+
+
+class TwelveBackForward(unittest.TestCase):
+    # TW4 "Activate the earlier hitboxes in Back+Forward (4MK) that exist but cannot connect." Frame 2
+    # of the chain carries low attack boxes (set 16) but no attack data, so no attack is armed on it
+    # ("aho" is att_hit_ok); upper3s/pl17.c makes it start the attack. The opponent crouches or stands
+    # from 20 frames before, so that a down press is not a parry tap.
+    @staticmethod
+    def back_forward(build, hold="5", d=40):
+        return F.run([f"20 5 {hold}", f"1 4+MK {hold}", f"60 5 {hold}"], p1="twelve", p2="ken", pos=(400, 400 + d), build=build)
+
+    def test_the_low_boxes_are_armed(self):
+        for build, armed in (("vanilla", {0}), ("upper3s", {1})):
+            with self.subTest(build=build):
+                rows = self.back_forward(build, d=250)  # a whiff
+                self.assertEqual({r["p"][0]["aho"] for r in rows if r["p"][0]["koc"] == 4 and r["p"][0]["bx"][1] == 16}, armed)
+
+    def test_it_hits_once_two_frames_earlier(self):
+        for hold in ("5", "2"):
+            for d in (40, 90):
+                with self.subTest(hold=hold, d=d):
+                    hits = {}
+                    for build in ("vanilla", "upper3s"):
+                        rows = self.back_forward(build, hold, d)
+                        hits[build] = [b["f"] for a, b in zip(rows, rows[1:]) if b["p"][1]["vit"] < a["p"][1]["vit"]]
+                    self.assertEqual(len(hits["vanilla"]), 1)
+                    self.assertEqual(len(hits["upper3s"]), 1)
+                    self.assertEqual(hits["upper3s"][0], hits["vanilla"][0] - 2)
+
+    def test_the_rest_of_the_move_is_unchanged(self):
+        # On hit it goes on as a hit on frame 3 does (its on-hit jump to block 4), so the advantage is
+        # the one set for the hitstun item (0, test_hitstun.py); the whiff is unchanged.
+        hit = self.back_forward("upper3s")
+        self.assertEqual(F.hit_advantage(hit, start=20), 0)
+        whiffs = [self.back_forward(build, d=250) for build in ("vanilla", "upper3s")]
+        self.assertEqual([F.free(rows, 0, 25) for rows in whiffs][0], [F.free(rows, 0, 25) for rows in whiffs][1])
+        self.assertEqual([[r["p"][0]["hix"] for r in rows if r["p"][0]["koc"] == 4] for rows in whiffs][0],
+                         [[r["p"][0]["hix"] for r in rows if r["p"][0]["koc"] == 4] for rows in whiffs][1])
+
+
 class QRushes(unittest.TestCase):
     # Q3 "Allow all overhead/low rushpunches ([4]6P/K/[P]) to be super-cancelled on hit/block/parry.
     # Make the riskier versions at least AS useful as the safe version." Q charges back for 50

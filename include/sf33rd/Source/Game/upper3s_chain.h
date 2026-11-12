@@ -163,6 +163,16 @@ int upper3s_chain_set_recovery(Upper3sChain* chain, s16 from, s16 frames);
 int upper3s_chain_set_tail(Upper3sChain* chain, s16 at, s16 from, s16 frames);
 
 /*
+ * Sets the field `field` (U3S_FRAME_*, upper3s.h) of the frame that starts at
+ * the game frame `at` of the move to `to`, when it holds `from` (the attack
+ * index signed, as the game reads it). The other bits of the words are kept:
+ * the low 6 bits of the half word of the attack index belong to the hit box
+ * index (CHARSET.c). A frame that already holds `to` counts as done. The
+ * U3S_FRAME_EXTDAT and U3S_FRAME_CANCEL fields need blocks of 4 words or more.
+ */
+int upper3s_chain_set_frame(Upper3sChain* chain, s16 at, s16 field, s16 from, s16 to);
+
+/*
  * The frames of the straight line of the chain (at most `max`), for the
  * dumps of the tools. Returns their number.
  */

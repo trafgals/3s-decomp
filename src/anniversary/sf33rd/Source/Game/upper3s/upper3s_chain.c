@@ -757,6 +757,81 @@ int upper3s_chain_set_tail(Upper3sChain* chain, s16 at, s16 from, s16 frames) {
     return upper3s_chain_shorten(chain, chain_frames, first, n, frames);
 }
 
+int upper3s_chain_set_frame(Upper3sChain* chain, s16 at, s16 field, s16 from, s16 to) {
+    Upper3sFrame chain_frames[U3S_CHAIN_MAX_FRAMES];
+    s32 n;
+    s32 i;
+    s32 elapsed = 0;
+    s32 stopped;
+
+    if ((chain == NULL) || (at < 0)) {
+        return 0;
+    }
+
+    if ((field != U3S_FRAME_ATTACK) && (chain->cgd < 4)) {
+        /* The fourth word is not there. */
+        return 0;
+    }
+
+    n = upper3s_chain_frames(chain, chain_frames, U3S_CHAIN_MAX_FRAMES, &stopped);
+
+    for (i = 0; (i < n) && (elapsed <= at); i++) {
+        if (elapsed == at) {
+            u32* w2 = &chain->words[chain_frames[i].word + 2];
+            u32* w3 = &chain->words[chain_frames[i].word + 3];
+            s16 now;
+
+            if (field == U3S_FRAME_ATTACK) {
+                /*
+                 * The high half of the third word is the attack index shifted left
+                 * by 6; its low 6 bits are the top of the hit box index
+                 * (CHARSET.c: cg_hit_ix is taken from cg_att_ix before the shift).
+                 */
+                u16 high = (u16)(*w2 >> 16);
+
+                now = (s16)((s16)high >> 6);
+
+                if (now == to) {
+                    return 1;
+                }
+
+                if (now != from) {
+                    return 0;
+                }
+
+                high = (u16)(((u16)((u16)to << 6)) | (high & 0x3F));
+                *w2 = ((u32)high << 16) | (*w2 & 0xFFFF);
+                return 1;
+            }
+
+            if ((field == U3S_FRAME_EXTDAT) || (field == U3S_FRAME_CANCEL)) {
+                /* The fourth word: cg_extdat in its low byte, cg_cancel in the next one. */
+                s32 shift = (field == U3S_FRAME_EXTDAT) ? 0 : 8;
+
+                now = (s16)((*w3 >> shift) & 0xFF);
+
+                if (now == to) {
+                    return 1;
+                }
+
+                if ((now != from) || (to < 0) || (to > 0xFF)) {
+                    return 0;
+                }
+
+                *w3 = (*w3 & ~((u32)0xFF << shift)) | ((u32)to << shift);
+                return 1;
+            }
+
+            return 0;
+        }
+
+        elapsed += chain_frames[i].hold;
+    }
+
+    /* No frame starts at `at`. */
+    return 0;
+}
+
 s32 upper3s_chain_list(const Upper3sChain* chain, Upper3sFrame* frames, s32 max) {
     s32 stopped;
 

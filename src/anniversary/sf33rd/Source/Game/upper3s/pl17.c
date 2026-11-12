@@ -93,6 +93,26 @@ const Upper3sMove upper3s_moves_twelve[] = {
     { U3S_KOC_NORMAL, 15, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -12, 0, 0, 0, 0, 0 }, /* s.HK (vanilla -1) */
     { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 }, /* c.MK (vanilla -1) */
     { U3S_KOC_NORMAL, 14, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -10, 0, 0, 0, 0, 0 }, /* 4MK (vanilla -1) */
+    /*
+     * TW4 - "Activate the earlier hitboxes in Back+Forward (4MK) that exist but cannot connect. The
+     * hit spark is positioned as if the earlier low hitboxes are supposed to connect, but they can't
+     * for some reason."
+     *
+     * Found (SF33_LIST_BLOCKS): frame 2 of the chain (game frames 5-6 of the move) has low attack
+     * boxes (set 16, from the floor up to 51, reaching 75 forward), but no attack data (index 0), so no
+     * attack is armed and they cannot hit. The attack starts on frame 3 (index -8: a new attack, entry
+     * 8), with the higher, shorter boxes of set 18, and a hit there skips the rest of frame 3
+     * (cg_extdat 0x80): the next frame is shown through the hitstop.
+     *
+     * The change: frame 2 starts the attack (-8) and frame 3 continues it (8), so the move still hits
+     * once - on frame 2 when the opponent is in reach of the low boxes, else on frame 3. A hit on frame
+     * 2 jumps to block 4, the frame a hit on frame 3 goes to (0x85: 0x80 | 5 is block 4), so the move
+     * after the hit is the same; without it frame 3 played after the hitstop and 4MK went from 0 to -4
+     * on hit (2 frames earlier, 2 frames longer). The whiff is unchanged.
+     */
+    { U3S_KOC_NORMAL, 14, U3S_MV_FRAME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, U3S_FRAME_ATTACK, 0, -8 },     /* TW4 */
+    { U3S_KOC_NORMAL, 14, U3S_MV_FRAME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, U3S_FRAME_EXTDAT, 0, 0x85 },  /* TW4 */
+    { U3S_KOC_NORMAL, 14, U3S_MV_FRAME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, U3S_FRAME_ATTACK, -8, 8 },    /* TW4 */
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }                              /* terminator */
 };
 

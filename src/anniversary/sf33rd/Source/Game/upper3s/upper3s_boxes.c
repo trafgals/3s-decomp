@@ -27,5 +27,21 @@ const Upper3sMoveBox upper3s_move_boxes[] = {
     { 2, 5, 60, U3S_BOX_ATTACK, 30, 1, { -50, 26, 50, 20 }, { -50, 26, 30, 40 } }, /* RY4: 20 lower */
     { 2, 5, 60, U3S_BOX_ATTACK, 30, 2, { -74, 26, 62, 20 }, { -74, 26, 42, 40 } }, /* RY4: 20 lower */
     { 2, 5, 60, U3S_BOX_ATTACK, 31, 2, { -88, 24, 72, 18 }, { -88, 24, 52, 38 } }, /* RY4: 20 lower */
+    /*
+     * Q8 - "Extend hitbox of first hit of EX High Speed Barrage downward so that it more consistently
+     * connects against crouching characters."
+     *
+     * High Speed Barrage is 214+P (`cmd_data.c:p12_cmd_30`), special animations 36-39 of Q; 39 is the
+     * EX one. Its first slap uses attack box set 73 (the later ones 74-77), and no other version uses
+     * it. Measured: the set's lowest edge (59, box 2) is exactly the top of the crouching hurtbox of
+     * Elena, Oro and Chun-Li, so the first slap misses them crouching or crouch-blocking at every
+     * distance, and Makoto too when she is in crouching hitstun (after Q's c.LK, a 3s' cancel). One
+     * lower is enough for the first three; 4 is the least that also reaches Makoto (2 and 3 do not).
+     * Each of the three boxes reaches 4 further down, its top unchanged. The second slap still misses
+     * Elena, Oro and Chun-Li after c.LK: that is Q7 (the opponent's movement on the middle hits).
+     */
+    { 17, 5, 39, U3S_BOX_ATTACK, 73, 0, { -96, 63, 80, 19 }, { -96, 63, 76, 23 } }, /* Q8: 4 lower */
+    { 17, 5, 39, U3S_BOX_ATTACK, 73, 1, { -81, 59, 68, 20 }, { -81, 59, 64, 24 } }, /* Q8: 4 lower */
+    { 17, 5, 39, U3S_BOX_ATTACK, 73, 2, { -61, 40, 59, 9 }, { -61, 40, 55, 13 } },  /* Q8: 4 lower */
     { -1, 0, 0, 0, 0, 0, { 0, 0, 0, 0 }, { 0, 0, 0, 0 } } /* terminator */
 };
