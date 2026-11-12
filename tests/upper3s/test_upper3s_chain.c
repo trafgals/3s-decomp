@@ -581,6 +581,41 @@ int main(void) {
         chain.cgd = 4;
     }
 
+    /* A span of frames (U3S_MV_FRAME with frame_span). */
+    {
+        Upper3sFrame frames[U3S_CHAIN_MAX_FRAMES];
+        s32 n;
+        s32 i;
+        s16 at1;
+        s16 span;
+
+        setup_chains(U3S_SEAN);
+        setup_character(&wk);
+        check(upper3s_chain_open(&wk.wu, U3S_KOC_ATTACK, 32, &chain) == 1, "the chain opens for a span");
+        n = upper3s_chain_list(&chain, frames, U3S_CHAIN_MAX_FRAMES);
+        check(n > 3, "the chain has four frames or more");
+        at1 = (s16)frames[0].hold;
+        span = (s16)(frames[1].hold + frames[2].hold); /* frames 1 and 2 */
+
+        for (i = 0; i < n; i++) {
+            chain.words[frames[i].word + 3] = 0;
+        }
+
+        chain.words[frames[2].word + 3] = 0x0700; /* frame 2 holds something else */
+        check(upper3s_chain_set_frames(&chain, at1, span, U3S_FRAME_CANCEL, 0, 0x60) == 0,
+              "a span with a frame that does not hold `from` is refused");
+        check((chain.words[frames[1].word + 3] & 0xFF00) == 0, "and nothing of it is written");
+        chain.words[frames[2].word + 3] = 0;
+        check(upper3s_chain_set_frames(&chain, at1, span, U3S_FRAME_CANCEL, 0, 0x60) == 1, "the span is set");
+        check(((chain.words[frames[1].word + 3] >> 8) & 0xFF) == 0x60 && ((chain.words[frames[2].word + 3] >> 8) & 0xFF) == 0x60,
+              "both frames of the span get the bits");
+        check(((chain.words[frames[0].word + 3] >> 8) & 0xFF) == 0 && ((chain.words[frames[3].word + 3] >> 8) & 0xFF) == 0,
+              "the frames around it do not");
+        check(upper3s_chain_set_frames(&chain, at1, span, U3S_FRAME_CANCEL, 0, 0x60) == 1, "a span already set counts as done");
+        check(upper3s_chain_set_frames(&chain, (s16)(at1 + 1), span, U3S_FRAME_CANCEL, 0, 0x60) == 0 || frames[1].hold == 1,
+              "the span must start where a frame starts");
+    }
+
     setup_chains(U3S_Q);
     setup_character(&wk);
     check(upper3s_chain_open(&wk.wu, U3S_KOC_NORMAL, 3, &chain) == 1,

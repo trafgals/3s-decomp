@@ -3,7 +3,7 @@
 As of 2026-11-12. Open items are tracked as GitHub issues ([below](#github-issues)). Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
 
 <!-- summary:start -->
-**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 60 verified in a fight test, 2 done but not yet measured, 9 partial, 62 not done, 1 not needed in this version.
+**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 64 verified in a fight test, 2 done but not yet measured, 9 partial, 58 not done, 1 not needed in this version.
 <!-- summary:end -->
 
 ## How to read this
@@ -70,9 +70,9 @@ The post's order. The number after each name is the character index.
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
 | CL1 | Houyoku-sen (SA II): 1 stock instead of 2; bar the longest possible, as Shin-Shoryuken. `super_arts_data[15][1]` 104/2 → 128/1 | table | verified |
-| CL2 | c.MK: cancel window no longer allows super-late cancels. | disc | — |
+| CL2 | c.MK: cancel window no longer allows super-late cancels. | disc | verified (`upper3s/pl14.c`: the c.MK had a second cancel window on block 6, after a frame without; its cancel bits are cleared, so one window is left, as on the c.MK of Ken, Ryu, Yun and Sean) |
 | CL3 | c.LP startup 2f → 3f. | disc | verified |
-| CL4 | Tensei Ranka (SA III): startup hitbox reaches the floor (can't be crouched); pulls in and down so all hits connect vs airborne opponents; enough knockdown advantage for a crossup; 2 stocks; bar as long as Shippu's. `super_arts_data[15][2]` 72/3 → 80/2 | table + disc | partial (stocks and bar verified) |
+| CL4 | Tensei Ranka (SA III): startup hitbox reaches the floor (can't be crouched); pulls in and down so all hits connect vs airborne opponents; enough knockdown advantage for a crossup; 2 stocks; bar as long as Shippu's. `super_arts_data[15][2]` 72/3 → 80/2 | table + disc | partial (stocks and bar verified; the startup hitbox verified: on its block only, the box reaches the floor, so the startup hit lands on all 20 crouching (retail: Hugo only). Not done: pulling airborne opponents in and down, and the knockdown advantage) |
 | CL5 | Houyoku-sen's middle hits no longer un-combo vs crouching Makoto etc. | disc | — |
 | CL6 | Goes through the mandatory standing frame after wakeup, like every other character. Not reproduced after a sweep: for Chun-Li and 11 others the last frame of the knockdown has no hurtbox and the character is free (standing, or crouching with down held) on the next. Other wakeups (throws, air knockdowns) not checked yet. | find | — |
 | CL7 | Crouching head hurtbox 2–3px higher and 3–4px further back, in every crouching animation (neutral, crouch-block, non-low-profile attacks). | disc | — |
@@ -183,7 +183,7 @@ The post's order. The number after each name is the character index.
 |:--|:--|:--|:--|
 | IB1 | Health 1035 → 1050 (Twelve's). `Com_Vital_Unit_Data[7]` | table | verified |
 | IB2 | Yami Shigure (SA III): 2 stocks instead of 1. `super_arts_data[7][2]` 80/1 → 80/2 | table | verified |
-| IB3 | Tsuiji Goe (623P): special- and super-cancellable almost straight after takeoff; a kunai thrown from it faces the right way if she hasn't passed over the opponent. | disc | — |
+| IB3 | Tsuiji Goe (623P): special- and super-cancellable almost straight after takeoff; a kunai thrown from it faces the right way if she hasn't passed over the opponent. | disc | verified (`upper3s/pl06.c`: the cancel bits, from frame 28-33 in retail, now start on the second frame in the air, 2 frames after takeoff, for the four versions; `PLS03.c:hissatsu_setup_union()` turns her to the opponent when a move is cancelled out of it in the air, so a kunai thrown before she passes over flies at the opponent instead of away. With the test's 214 input the kunai does not come out on frames 11-12 after the press; not explained, the cancel bits are set there) |
 | IB4 | The target-combo s.HP (4MP→HP and LP→MP→HP) never knocks down. Today one of its two hitboxes is marked knockdown and the other isn't. | disc | — |
 | IB5 | Taunt: can't be throw-teched, and she can parry or attack in the air once the opponent recovers. | logic | partial (throw tech) |
 
@@ -246,7 +246,7 @@ The post's order. The number after each name is the character index.
 | RM2 | c.MP damage +6 (nearly Ryu's). | disc | verified |
 | RM3 | Close s.HP: the earlier hitboxes knock airborne opponents down like the later ones, with juggles after. | disc | — |
 | RM4 | More hitstun on far s.MK, far s.HK, c.MK and 6MK, so none is negative on hit. | disc | verified |
-| RM5 | s.MK: less knockback on grounded opponents. Target combo s.MK→s.HK: bigger hitboxes on the 2nd hit. | disc | — |
+| RM5 | s.MK: less knockback on grounded opponents. Target combo s.MK→s.HK: bigger hitboxes on the 2nd hit. | disc | verified (`upper3s/pl18.c`: the close s.MK's knockback one step less, 17 → 16, so Ken slides 66 apart instead of 82; `upper3s/upper3s_boxes.c`: the s.HK of the target combo reaches 20 lower, so it hits everyone standing (retail missed Yun, Oro and Yang) and 17 of 20 crouching, all but Elena, Oro and Chun-Li (retail: Hugo only)) |
 | RM6 | Chains c.LP→c.LK and c.LK→c.LP. | logic | verified |
 | RM7 | Taunt length 131f → about 80f. | disc | verified |
 | RM8 | Light of Virtue meter gain on startup/hit/block 0/1/1 → 1/3/2. | table + disc | — |
@@ -276,7 +276,7 @@ The post's order. The number after each name is the character index.
 | # | Item | Kind | Branch |
 |:--|:--|:--|:--|
 | SN1 | More hitstun on close and far s.HP, c.HP, s.MK, far s.HK, c.MK and 6HP, so none is negative on hit. | disc | verified |
-| SN2 | Sean Roll (214P) super-cancellable in the middle. | disc | — |
+| SN2 | Sean Roll (214P) super-cancellable in the middle. | disc | verified (`upper3s/pl15.c`: no frame of the roll had cancel bits; the rolling blocks but the first and the last get the super bit, LP frames 6-13, MP 4-24, HP 4-23 and its replay; `upper3s/upper3s_ch_sean.c` arms the cancel there, since the roll does not arm it itself. A super comes out across the middle of all three, never in retail. With the test's input, a super with its punch on frame 13 after the press (and 25 in the HP roll) does not come out; not explained) |
 | SN3 | Ryuubi Kyaku (236K) startup 25f (all) → 17/19/21f; the HK version knocks down. | disc | partial (all three 25 → 19 measured; one shared chain, and no knockdown) |
 | SN4 | Ryuubi Kyaku L/M: more hit advantage, so supers link after a hit. Measured: L/M are −3 on hit in the retail game and −8/−6 with SN3's shorter startup, because the kick ends when Sean lands (the startup change moves the hit earlier but not the landing). The defender's hold (`hs_you`) does not reach these hits: their stops are synced to the attacker's (`HITCHECK.c:same_dm_stop()`, `att.dipsw & 1`). Needs a patch of the hit's level or of the sync. | disc | — |
 | SN5 | Faster startup on all Tackles: c.MK xx LP Tackle and s.HP/c.HP xx MP Tackle combo, and HP Tackle is 1f from comboing. | disc | — |
@@ -323,7 +323,7 @@ No changes in the post.
 2. **B2 is not reproduced.** No fight makes a character move during the opponent's superflash: a hit, a block or a parry of a projectile on the first frame of the flash, and the opponent's fireball landing then, all leave the frozen character frozen in the retail game too (a hit on the frame the flash starts is delayed until after it). PR #1's guard drops the damage stop of a frozen character that is hit, on the theory that it replaces the flash's stop, but `PLMAIN.c:select_hit_stop()` keeps the longer of the two. The trigger is not known, so the item stays `done`, not verified.
 3. **HU5: check the move.** PR #1 reads the Meat Squasher's startup from the disc as 24/52/67, against the post's 21/31/44; light is close, medium and heavy are far off.
 4. **SN3 and SN9 are partial.** The three Ryuubi Kyaku share one chain, so all three are 19 frames (the spec asks 17/19/21) and the Roundhouse knockdown is not done. EX Dragon Smash is 5 frames (the spec asks 3), because the chain cannot be held shorter.
-5. **Documentation errors.** Issue #2 says `plpat16.c` is Makoto (it is Chun-Li; Makoto is `plpat17.c`, AGENTS.md §3.2). Chun-Li's table header calls SA I "Houyoku-sen" (it is Kikoushou). PR #1's table for Q labels entry 1 as "6LP"; in the game it is the far standing Jab.
+5. **Documentation errors.** Issue #2 says `plpat16.c` is Makoto (it is Chun-Li; Makoto is `plpat17.c`, AGENTS.md §3.2). Chun-Li's table header called SA I "Houyoku-sen" (it is Kikoushou) and gave the wrong commands (fixed: all three are 236236, P for SA I, K for SA II and III). PR #1's table for Q labelled entry 1 as "6LP"; in the game it is the far standing Jab (fixed, with the index comment of the five tables that read koa as a dash).
 
 ## GitHub issues
 

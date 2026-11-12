@@ -10,9 +10,12 @@
  *   { flags, store_max, gauge_len, dtm }
  *
  * Retail values (PLCNT.c:super_arts_data[15] = chunli, {cmd set, gauge, stock}):
- *   SA I   { 20,  88, 1 }   236+P        (Houyoku-sen, single hit)
- *   SA II  { 21, 104, 2 }   623+P        (Houyoku-sen)
- *   SA III { 22,  72, 3 }   236+P+P      (Tensei Ranka, multi hit)
+ *   SA I   { 20,  88, 1 }   236236+P     (Kikoushou)
+ *   SA II  { 21, 104, 2 }   236236+K     (Houyoku-sen)
+ *   SA III { 22,  72, 3 }   236236+K     (Tensei Ranka)
+ * The commands are cmd_data.c:p10_cmd_20-22 (tools/upper3s/decode_cmd.py: all three are 236236,
+ * with the punches for SA I and the kicks for the other two; a character has one super art per
+ * round, so they can share the motion).
  *
  * 3s' changes:
  *   SA II  - the stock cost goes from 2 to 1 and the bar becomes the longest
@@ -42,17 +45,21 @@ const Upper3sSuperArt upper3s_super_art_chunli[4] = {
  *   char_ix = base + kos * 3 + koa
  *
  * with kos the button (0 LP, 1 MP, 2 HP, 3 LK, 4 MK, 5 HK) and koa the
- * variant.  For the standing normals the base is 0 and koa is 0 without a
- * dash (5X), 1 with a dash forward (6X) and 2 with a dash back (4X); for
- * the crouching normals the base is 18 and koa is 0 without a dash (2X),
- * 1 with a dash forward (3X) and 2 with a dash back (1X).
+ * variant. For the standing normals the base is 0: koa 0 is the close
+ * standing normal (or the only one), 1 the far one and 2 the command normal
+ * of the button (6X or 4X, depending on the character); a variant a
+ * character does not have points at the chain of another one. Measured in
+ * the fight harness (the "cix" of the log): Remy's close s.MK is 12 and his
+ * far s.MK 13, Twelve's 4MK and Remy's 6MK are 14, and Q's far s.LP is 1.
+ * (An earlier version of this comment read koa as a dash forward or back.)
+ * For the crouching normals the base is 18 and koa 0 is 2X; what koa 1 and
+ * 2 hold there was not checked.
  *
- *   5LP  0    6LP  1    4LP  2     5MP  3    6MP  4    4MP  5
- *   5HP  6    6HP  7    4HP  8     5LK  9    6LK 10    4LK 11
- *   5MK 12    6MK 13    4MK 14     5HK 15    6HK 16    4HK 17
- *   2LP 18    3LP 19    1LP 20     2MP 21    3MP 22    1MP 23
- *   2HP 24    3HP 25    1HP 26     2LK 27    3LK 28    1LK 29
- *   2MK 30    3MK 31    1MK 32     2HK 33    3HK 34    1HK 35
+ *            close  far  command          close  far  command
+ *   s.LP       0     1     2       s.MP     3     4     5
+ *   s.HP       6     7     8       s.LK     9    10    11
+ *   s.MK      12    13    14       s.HK    15    16    17
+ *   c.LP 18   c.MP 21   c.HP 24   c.LK 27   c.MK 30   c.HK 33
  *
  * The Cold Blue Kick (63214K) is a move of Remy, not of Chun-Li: an earlier version of
  * this table changed two of Chun-Li's specials under its name. Its change is in
@@ -71,5 +78,15 @@ const Upper3sMove upper3s_moves_chunli[] = {
      * is usable as a crouch tech, and a throw is still a 2 frame punish.
      */
     { U3S_KOC_NORMAL, 18, U3S_MV_STARTUP, 0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0 }, /* 2LP - the crouching Jab */
+    /*
+     * CL2 - "Cancel window on cr.Fwd (c.MK) fixed to not allow super-late cancels."
+     *
+     * Found (SF33_LIST_BLOCKS, and the "can" of the fight log): the c.MK (normal 30) has its cancel
+     * window on the hit frame and the next one (blocks 3 and 4, cancel bits 0x60: special and super),
+     * like the c.MK of Ken, Ryu, Yun and Sean, then a frame without, and then a second window on
+     * frame 6 of the chain (block 6, game frames 13-14), long after the hit: the super-late cancel.
+     * Its cancel bits are cleared. The first window is unchanged.
+     */
+    { U3S_KOC_NORMAL, 30, U3S_MV_FRAME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, U3S_FRAME_CANCEL, 0x60, 0 }, /* CL2 */
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }                                /* terminator */
 };

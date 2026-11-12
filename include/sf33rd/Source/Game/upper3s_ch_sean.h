@@ -28,4 +28,17 @@
 
 s16 upper3s_ch_sean_tackle_feint(s16 player, s16 koc, s16 char_index, u16 catch_box, u16 sw_new);
 
+/*
+ * SN2 - "Allow Sean Roll (214P) to be super-cancelled during the middle."
+ *
+ * The middle frames of Sean Roll (special animations 48-50) get the super cancel
+ * bit 0x40 in upper3s/pl15.c. A super cancel also needs meoshi_hit_flag
+ * (PLS00.c:check_cg_cancel_data()): a hit sets it, and so does a frame of a
+ * special move with the bit (CHARSET.c, when `kow & 0x60`), but the roll is not
+ * such a move - measured: with the bit alone, no super comes out of it. Returns
+ * 1 when the frame arms the cancel itself: a frame of Sean Roll (koc 5,
+ * animations 48-50) that has the super bit.
+ */
+int upper3s_ch_sean_roll_arms_super(s16 koc, s16 char_index, u8 cg_cancel);
+
 #endif

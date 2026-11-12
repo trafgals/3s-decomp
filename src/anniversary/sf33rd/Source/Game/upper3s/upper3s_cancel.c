@@ -3,6 +3,7 @@
 #include "sf33rd/Source/Game/upper3s_ch_alex.h"
 #include "sf33rd/Source/Game/upper3s_ch_elena.h"
 #include "sf33rd/Source/Game/upper3s_ch_remy.h"
+#include "sf33rd/Source/Game/upper3s_ch_sean.h"
 #include "sf33rd/Source/Game/upper3s_ch_q.h"
 #include "sf33rd/Source/Game/upper3s_ch_twelve.h"
 
@@ -80,7 +81,17 @@ u8 upper3s_cancel_mask(s16 char_id, s16 koc, s16 char_ix, s16 frame, u8 cg_cance
 }
 
 void upper3s_cancel_input(PLW* wk) {
-    if ((wk->as == NULL) || (wk->cp == NULL) || (wk->wu.now_koc != U3S_KOC_NORMAL)) {
+    if ((wk->as == NULL) || (wk->cp == NULL)) {
+        return;
+    }
+
+    if ((wk->player_number == U3S_SEAN) &&
+        upper3s_ch_sean_roll_arms_super(wk->wu.now_koc, wk->wu.char_index, wk->wu.cg_cancel)) {
+        /* SN2: the middle of Sean Roll arms its own super cancel (upper3s_ch_sean.h). */
+        wk->wu.meoshi_hit_flag = 1;
+    }
+
+    if (wk->wu.now_koc != U3S_KOC_NORMAL) {
         return;
     }
 

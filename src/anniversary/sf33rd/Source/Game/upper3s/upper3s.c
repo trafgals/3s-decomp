@@ -180,7 +180,10 @@ void upper3s_apply_move(WORK* wk, const Upper3sMove* move) {
         Upper3sChain chain;
 
         if (!upper3s_chain_open(wk, move->koc, move->index, &chain) ||
-            !upper3s_chain_set_frame(&chain, move->frame_at, move->frame_field, move->frame_from, move->frame_to)) {
+            !((move->frame_span > 0)
+                  ? upper3s_chain_set_frames(&chain, move->frame_at, move->frame_span, move->frame_field, move->frame_from,
+                                             move->frame_to)
+                  : upper3s_chain_set_frame(&chain, move->frame_at, move->frame_field, move->frame_from, move->frame_to))) {
             upper3s_note_failure(move, U3S_MV_FRAME);
         }
     }

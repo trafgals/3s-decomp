@@ -173,6 +173,13 @@ int upper3s_chain_set_tail(Upper3sChain* chain, s16 at, s16 from, s16 frames);
 int upper3s_chain_set_frame(Upper3sChain* chain, s16 at, s16 field, s16 from, s16 to);
 
 /*
+ * The same on every frame that starts in the `span` game frames from `at` (the
+ * first must start at `at`). Nothing is written unless every one of them holds
+ * `from` or `to`.
+ */
+int upper3s_chain_set_frames(Upper3sChain* chain, s16 at, s16 span, s16 field, s16 from, s16 to);
+
+/*
  * The frames of the straight line of the chain (at most `max`), for the
  * dumps of the tools. Returns their number.
  */

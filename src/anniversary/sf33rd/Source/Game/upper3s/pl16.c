@@ -38,17 +38,21 @@ const Upper3sSuperArt upper3s_super_art_q[4] = {
  *   char_ix = base + kos * 3 + koa
  *
  * with kos the button (0 LP, 1 MP, 2 HP, 3 LK, 4 MK, 5 HK) and koa the
- * variant.  For the standing normals the base is 0 and koa is 0 without a
- * dash (5X), 1 with a dash forward (6X) and 2 with a dash back (4X); for
- * the crouching normals the base is 18 and koa is 0 without a dash (2X),
- * 1 with a dash forward (3X) and 2 with a dash back (1X).
+ * variant. For the standing normals the base is 0: koa 0 is the close
+ * standing normal (or the only one), 1 the far one and 2 the command normal
+ * of the button (6X or 4X, depending on the character); a variant a
+ * character does not have points at the chain of another one. Measured in
+ * the fight harness (the "cix" of the log): Remy's close s.MK is 12 and his
+ * far s.MK 13, Twelve's 4MK and Remy's 6MK are 14, and Q's far s.LP is 1.
+ * (An earlier version of this comment read koa as a dash forward or back.)
+ * For the crouching normals the base is 18 and koa 0 is 2X; what koa 1 and
+ * 2 hold there was not checked.
  *
- *   5LP  0    6LP  1    4LP  2     5MP  3    6MP  4    4MP  5
- *   5HP  6    6HP  7    4HP  8     5LK  9    6LK 10    4LK 11
- *   5MK 12    6MK 13    4MK 14     5HK 15    6HK 16    4HK 17
- *   2LP 18    3LP 19    1LP 20     2MP 21    3MP 22    1MP 23
- *   2HP 24    3HP 25    1HP 26     2LK 27    3LK 28    1LK 29
- *   2MK 30    3MK 31    1MK 32     2HK 33    3HK 34    1HK 35
+ *            close  far  command          close  far  command
+ *   s.LP       0     1     2       s.MP     3     4     5
+ *   s.HP       6     7     8       s.LK     9    10    11
+ *   s.MK      12    13    14       s.HK    15    16    17
+ *   c.LP 18   c.MP 21   c.HP 24   c.LK 27   c.MK 30   c.HK 33
  *
  * 3s': "Increase hitstun on crouching Short, crouching Forward, and standing
  * Roundhouse so they are not negative on hit.  Standing Roundhouse is -10 on
@@ -74,20 +78,16 @@ const Upper3sMove upper3s_moves_q[] = {
     { U3S_KOC_NORMAL, 30, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -11, 0, 0, 0, 0, 0 }, /* c.MK (vanilla -2) */
     { U3S_KOC_NORMAL, 15, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -27, 0, 0, 0, 0, 0 }, /* s.HK, close and far share the entry (vanilla -10) */
     /*
-     * The standing Jab of Q starts in 6 frames when it is done with a
-     * dash - the 6LP and the 4LP, which share their chain - and in 4
-     * frames when it is done without one.  The design document asks for
-     * 4 frames, so the two versions with a dash are brought to the
-     * startup of the version without one.
-     *
-     * The data of the disc puts the 6LP and the 4LP in one chain: the slot
-     * holds the same byte offset for the two entries, so one change of the
-     * chain changes both of them.  The table holds an entry for each of the
-     * two moves anyway, so that the table says what the patch does; the
-     * second entry finds the chain that already has the startup of the
-     * target and leaves it alone.
+     * Q4 - "Decrease the startup of far standing Jab from 6f to 4f". The far
+     * s.LP (koa 1, normal 1) starts in 6 frames; the close one (0) in 4. Q
+     * has no command normal on LP, so normal 2 points at the far s.LP's chain:
+     * the slot holds the same byte offset for the two entries, so one change of
+     * the chain changes both. The table holds a row for each anyway, so that it
+     * says what the patch does; the second row finds the chain that already has
+     * the target startup and leaves it alone. (An earlier version of this
+     * comment called them the 6LP and the 4LP, "with a dash".)
      */
-    { U3S_KOC_NORMAL, 1, U3S_MV_STARTUP, 0, 0, 0, 0, 0, 0, 0, 6, 4, 0, 0 },  /* 6LP - the dash standing Jab */
-    { U3S_KOC_NORMAL, 2, U3S_MV_STARTUP, 0, 0, 0, 0, 0, 0, 0, 6, 4, 0, 0 },  /* 4LP - the dash standing Jab */
+    { U3S_KOC_NORMAL, 1, U3S_MV_STARTUP, 0, 0, 0, 0, 0, 0, 0, 6, 4, 0, 0 },  /* far s.LP: 6 -> 4 */
+    { U3S_KOC_NORMAL, 2, U3S_MV_STARTUP, 0, 0, 0, 0, 0, 0, 0, 6, 4, 0, 0 },  /* normal 2: the far s.LP's chain */
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }                              /* terminator */
 };

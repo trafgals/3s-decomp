@@ -38,17 +38,21 @@ const Upper3sSuperArt upper3s_super_art_sean[4] = {
  *   char_ix = base + kos * 3 + koa
  *
  * with kos the button (0 LP, 1 MP, 2 HP, 3 LK, 4 MK, 5 HK) and koa the
- * variant.  For the standing normals the base is 0 and koa is 0 without a
- * dash (5X), 1 with a dash forward (6X) and 2 with a dash back (4X); for
- * the crouching normals the base is 18 and koa is 0 without a dash (2X),
- * 1 with a dash forward (3X) and 2 with a dash back (1X).
+ * variant. For the standing normals the base is 0: koa 0 is the close
+ * standing normal (or the only one), 1 the far one and 2 the command normal
+ * of the button (6X or 4X, depending on the character); a variant a
+ * character does not have points at the chain of another one. Measured in
+ * the fight harness (the "cix" of the log): Remy's close s.MK is 12 and his
+ * far s.MK 13, Twelve's 4MK and Remy's 6MK are 14, and Q's far s.LP is 1.
+ * (An earlier version of this comment read koa as a dash forward or back.)
+ * For the crouching normals the base is 18 and koa 0 is 2X; what koa 1 and
+ * 2 hold there was not checked.
  *
- *   5LP  0    6LP  1    4LP  2     5MP  3    6MP  4    4MP  5
- *   5HP  6    6HP  7    4HP  8     5LK  9    6LK 10    4LK 11
- *   5MK 12    6MK 13    4MK 14     5HK 15    6HK 16    4HK 17
- *   2LP 18    3LP 19    1LP 20     2MP 21    3MP 22    1MP 23
- *   2HP 24    3HP 25    1HP 26     2LK 27    3LK 28    1LK 29
- *   2MK 30    3MK 31    1MK 32     2HK 33    3HK 34    1HK 35
+ *            close  far  command          close  far  command
+ *   s.LP       0     1     2       s.MP     3     4     5
+ *   s.HP       6     7     8       s.LK     9    10    11
+ *   s.MK      12    13    14       s.HK    15    16    17
+ *   c.LP 18   c.MP 21   c.HP 24   c.LK 27   c.MK 30   c.HK 33
  *
  * 3s': "Increase hitstun of close and far Fierce, crouching Fierce, standing
  * Forward, far Roundhouse, crouching Forward, and Towards+Fierce (6HP) to
@@ -68,6 +72,19 @@ const Upper3sSuperArt upper3s_super_art_sean[4] = {
  */
 
 const Upper3sMove upper3s_moves_sean[] = {
+    /*
+     * SN2 - "Allow Sean Roll (214P) to be super-cancelled during the middle."
+     *
+     * Sean Roll is special animations 48-50 (LP, MP, HP), and no frame of it has cancel bits. Found
+     * (the "blk" and "x" of the fight log): each starts with one block, rolls on blocks 1-4 (LP) or
+     * 1-13 (MP, HP; the HP one plays 6-13 twice), stops on one block and stands up. "The middle" is
+     * taken as the rolling blocks but the first and the last: blocks 2-3 (LP, game frames 6-13) and
+     * 2-12 (MP 4-24, HP 4-23). They get the super cancel bit (0x40); a special move that has it arms
+     * its own cancel, without a hit (CHARSET.c, `kow & 0x60`), as Tsuiji Goe does.
+     */
+    { U3S_KOC_ATTACK, 48, U3S_MV_FRAME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, U3S_FRAME_CANCEL, 0, 0x40, 8 },  /* SN2: LP */
+    { U3S_KOC_ATTACK, 49, U3S_MV_FRAME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, U3S_FRAME_CANCEL, 0, 0x40, 21 }, /* SN2: MP */
+    { U3S_KOC_ATTACK, 50, U3S_MV_FRAME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, U3S_FRAME_CANCEL, 0, 0x40, 20 }, /* SN2: HP */
     /* Hitstun so the move is not negative on hit: the hold of the defender (hs_you) that makes
      * it 0 on hit, measured in the real engine (tests/match/test_hitstun.py). */
     { U3S_KOC_NORMAL, 6, U3S_MV_HS_YOU, 0, 0, 0, 0, 0, -13, 0, 0, 0, 0, 0 }, /* close s.HP (vanilla -2) */

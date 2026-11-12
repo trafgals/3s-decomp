@@ -250,12 +250,15 @@ typedef struct {
      * the game frame `frame_at` of the move holds `frame_from` in its field
      * `frame_field` (U3S_FRAME_*) in the retail data and gets `frame_to`
      * (upper3s_chain_set_frame()). Rows that do not use it leave the four
-     * fields out. One row changes one field of one frame.
+     * fields out. A row changes one field of one frame, or, with `frame_span`,
+     * of every frame that starts in the `frame_span` game frames from
+     * `frame_at` (each of them must hold `frame_from` or already `frame_to`).
      */
     s16 frame_at;
     s16 frame_field;
     s16 frame_from;
     s16 frame_to;
+    s16 frame_span;
 } Upper3sMove;
 
 /*

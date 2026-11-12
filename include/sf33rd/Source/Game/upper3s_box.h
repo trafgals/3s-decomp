@@ -49,9 +49,10 @@ typedef struct {
  * several moves (the three Joudan Sokutou Geri of Ryu use the same attack boxes), so a
  * change of the set itself would change all of them. A row of this kind leaves the
  * set alone: on the frames of the animation `char_index` (WORK.char_index) of the slot
- * `koc` of the character, when the frame uses the set `index`, the hit check is given a
- * copy of the set with the box changed (upper3s_box_frame(), called by
- * CHARSET.c:set_jugde_area()). Only attack boxes for now.
+ * `koc` of the character, when the frame uses the set `index` (and, with `block`, only on
+ * one block of the animation), the hit check is given a copy of the set with the box
+ * changed (upper3s_box_frame(), called by CHARSET.c:set_jugde_area()). Only attack boxes
+ * for now.
  */
 typedef struct {
     s16 char_id; /* -1 ends the table */
@@ -62,6 +63,12 @@ typedef struct {
     s16 box;
     s16 from[4];
     s16 to[4];
+    /*
+     * 0: every frame of the animation that uses the set. k: only block k - 1 of the
+     * animation (WORK.cg_ix / cgd_type, the "blk" of the fight log), for a set that
+     * several frames of one move share. Rows that leave it out apply to every frame.
+     */
+    s16 block;
 } Upper3sMoveBox;
 
 extern const Upper3sMoveBox upper3s_move_boxes[];

@@ -29,3 +29,8 @@ s16 upper3s_ch_sean_tackle_feint(s16 player, s16 koc, s16 char_index, u16 catch_
 
     return (sw_new & U3S_SEAN_KICKS) != 0;
 }
+
+/* SN2, the super cancel of Sean Roll (upper3s_ch_sean.h). */
+int upper3s_ch_sean_roll_arms_super(s16 koc, s16 char_index, u8 cg_cancel) {
+    return (koc == 5) && (char_index >= 48) && (char_index <= 50) && ((cg_cancel & 0x40) != 0);
+}

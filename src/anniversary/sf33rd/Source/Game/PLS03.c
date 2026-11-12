@@ -13,6 +13,8 @@
 #include "sf33rd/Source/Game/SysDir.h"
 #include "sf33rd/Source/Game/workuser.h"
 #if defined(UPPER_3S)
+#include "sf33rd/Source/Game/PLS01.h"
+#include "sf33rd/Source/Game/upper3s_ch_ibuki.h"
 #include "sf33rd/Source/Game/upper3s_input.h"
 #endif
 
@@ -23,6 +25,15 @@ extern const s16 cmdshot_conv_tbl[32];
 u16 decode_wst_data(PLW* wk, u16 cmd, s16 cmd_ex);
 
 void hissatsu_setup_union(PLW* wk, s16 rno) {
+#if defined(UPPER_3S)
+    // Third Strike Upper (IB3): a move cancelled out of Ibuki's Tsuiji Goe in the air faces the opponent
+    // (upper3s_ch_ibuki.h). The move being left is still the current one here.
+    if (upper3s_ibuki_cancel_faces_opponent(wk->player_number, wk->wu.now_koc, wk->wu.char_index,
+                                            wk->wu.xyz[1].disp.pos)) {
+        set_rl_waza(wk);
+        wk->wu.rl_flag = wk->wu.rl_waza;
+    }
+#endif
     wk->wu.routine_no[1] = 4;
     wk->wu.routine_no[2] = rno;
     wk->wu.routine_no[3] = 0;

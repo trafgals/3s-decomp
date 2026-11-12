@@ -117,7 +117,19 @@ static void test_the_retail_window_is_the_reference(void) {
     check(nage == 14, "the retail game opens a window of 14 frames");
 }
 
+static void test_a_cancel_out_of_tsuiji_goe_faces_the_opponent(void) {
+    printf("IB3: a move cancelled out of Tsuiji Goe in the air faces the opponent\n");
+    check(upper3s_ibuki_cancel_faces_opponent(7, 5, 107, 30), "Ibuki, Tsuiji Goe (LP), in the air");
+    check(upper3s_ibuki_cancel_faces_opponent(7, 5, 110, 1), "the EX one, just off the ground");
+    check(!upper3s_ibuki_cancel_faces_opponent(7, 5, 107, 0), "not on the ground");
+    check(!upper3s_ibuki_cancel_faces_opponent(7, 5, 106, 30), "not another special");
+    check(!upper3s_ibuki_cancel_faces_opponent(7, 5, 111, 30), "not the move after the range");
+    check(!upper3s_ibuki_cancel_faces_opponent(7, 4, 107, 30), "not a normal with the same index");
+    check(!upper3s_ibuki_cancel_faces_opponent(2, 5, 107, 30), "not another character");
+}
+
 int main(void) {
+    test_a_cancel_out_of_tsuiji_goe_faces_the_opponent();
     test_the_personal_action_cannot_be_teched();
     test_an_open_window_is_closed();
     test_the_retail_window_is_the_reference();

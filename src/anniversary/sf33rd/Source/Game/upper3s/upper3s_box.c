@@ -79,6 +79,15 @@ s16 upper3s_apply_boxes(PLW* wk, const Upper3sBox* table) {
 /* The copies of the sets the hit check is given, one per player slot. */
 static UNK_5 upper3s_box_attack_copy[2];
 
+/* Whether the row is for the block the work is on (a row without `block` is for every block). */
+static int upper3s_box_on_block(const WORK* wk, const Upper3sMoveBox* row) {
+    if (row->block == 0) {
+        return 1;
+    }
+
+    return (wk->cgd_type > 0) && ((wk->cg_ix / wk->cgd_type) + 1 == row->block);
+}
+
 void upper3s_box_frame_table(WORK* wk, const Upper3sMoveBox* table) {
     PLW* plw_wk = (PLW*)wk;
     s16 i;
@@ -94,7 +103,8 @@ void upper3s_box_frame_table(WORK* wk, const Upper3sMoveBox* table) {
         const s16* box;
 
         if ((row->char_id != plw_wk->player_number) || (row->koc != wk->now_koc) ||
-            (row->char_index != wk->char_index) || (row->kind != U3S_BOX_ATTACK) || (row->index != wk->cg_ja.atix)) {
+            (row->char_index != wk->char_index) || (row->kind != U3S_BOX_ATTACK) || (row->index != wk->cg_ja.atix) ||
+            !upper3s_box_on_block(wk, row)) {
             continue;
         }
 
@@ -116,7 +126,7 @@ void upper3s_box_frame_table(WORK* wk, const Upper3sMoveBox* table) {
             const Upper3sMoveBox* more = &table[i];
 
             if ((more->char_id == row->char_id) && (more->koc == row->koc) && (more->char_index == row->char_index) &&
-                (more->kind == U3S_BOX_ATTACK) && (more->index == row->index) &&
+                (more->kind == U3S_BOX_ATTACK) && (more->index == row->index) && upper3s_box_on_block(wk, more) &&
                 upper3s_box_is(wk->attack_adrs[more->index].att_box[more->box], more->from)) {
                 for (k = 0; k < 4; k++) {
                     copy->att_box[more->box][k] = more->to[k];

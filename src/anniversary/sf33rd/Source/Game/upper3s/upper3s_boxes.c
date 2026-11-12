@@ -43,5 +43,35 @@ const Upper3sMoveBox upper3s_move_boxes[] = {
     { 17, 5, 39, U3S_BOX_ATTACK, 73, 0, { -96, 63, 80, 19 }, { -96, 63, 76, 23 } }, /* Q8: 4 lower */
     { 17, 5, 39, U3S_BOX_ATTACK, 73, 1, { -81, 59, 68, 20 }, { -81, 59, 64, 24 } }, /* Q8: 4 lower */
     { 17, 5, 39, U3S_BOX_ATTACK, 73, 2, { -61, 40, 59, 9 }, { -61, 40, 55, 13 } },  /* Q8: 4 lower */
+    /*
+     * RM5 (the hitboxes) - "enlarge hitboxes on 2nd hit of Target Combo (standing Forward->RH) so that
+     * it connects on everyone standing and most people crouching. Bugfix, it completely whiffs against
+     * Yun/Yang/etc at point blank when standing."
+     *
+     * The target combo is normal animation 157 of Remy (the close s.MK, normal 12, branches into it when
+     * it hits). Its s.HK uses attack box sets 25 (lowest edge 84) and 26 (75); the straight line of the
+     * chain is the s.MK part, so these rows are reached through the branch. Measured at 20 and 50
+     * apart: retail misses standing Yun, Oro and Yang and every crouching character but Hugo. 18 lower
+     * is the least that reaches everyone standing but still misses 9 of the 20 crouching (barely
+     * "most"); 20 misses 4 crouching (Elena, Oro, Urien, Chun-Li), and 3 with the s.MK's lower
+     * knockback (pl18.c), which brings Urien in; 30 reaches all, more than the post asks. Each box
+     * reaches 20 further down, its top unchanged.
+     */
+    { 19, 4, 157, U3S_BOX_ATTACK, 25, 0, { -84, 13, 88, 8 }, { -84, 13, 68, 28 } },   /* RM5: 20 lower */
+    { 19, 4, 157, U3S_BOX_ATTACK, 25, 1, { -72, 20, 84, 12 }, { -72, 20, 64, 32 } },  /* RM5: 20 lower */
+    { 19, 4, 157, U3S_BOX_ATTACK, 26, 0, { -82, 29, 79, 18 }, { -82, 29, 59, 38 } },  /* RM5: 20 lower */
+    { 19, 4, 157, U3S_BOX_ATTACK, 26, 2, { -51, 18, 75, 17 }, { -51, 18, 55, 37 } },  /* RM5: 20 lower */
+    /*
+     * CL4 (the startup hitbox) - "Tensei Ranka (SAIII) startup hitbox reaches down to the floor so it
+     * can't be crouched".
+     *
+     * Tensei Ranka is 236236+K, special animation 52 of Chun-Li. Its startup hit is block 4 (attack
+     * entry 106, 3 frames); the later hits (entries 102-105) use the same box set 94 and hit index
+     * 436, so the row names the block. A box is placed from the character's position, and Chun-Li
+     * is already rising during the startup hit (54, 66 and 76 above the floor on its three frames),
+     * so the box's bottom (26) is 80-102 above the floor and misses crouching opponents. Its bottom
+     * goes to -76, the floor on the highest of the three frames; its top (77) is unchanged.
+     */
+    { 15, 5, 52, U3S_BOX_ATTACK, 94, 0, { -59, 45, 26, 51 }, { -59, 45, -76, 153 }, 5 }, /* CL4: block 4 reaches the floor */
     { -1, 0, 0, 0, 0, 0, { 0, 0, 0, 0 }, { 0, 0, 0, 0 } } /* terminator */
 };

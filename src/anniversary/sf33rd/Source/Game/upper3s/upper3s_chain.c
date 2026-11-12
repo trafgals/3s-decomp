@@ -832,6 +832,79 @@ int upper3s_chain_set_frame(Upper3sChain* chain, s16 at, s16 field, s16 from, s1
     return 0;
 }
 
+/* The value of the field of a frame (see upper3s_chain_set_frame()), or -0x8000 when there is none. */
+static s32 upper3s_chain_frame_field(const Upper3sChain* chain, const Upper3sFrame* frame, s16 field) {
+    u32 w2 = chain->words[frame->word + 2];
+
+    if (field == U3S_FRAME_ATTACK) {
+        return (s16)((s16)(u16)(w2 >> 16) >> 6);
+    }
+
+    if ((chain->cgd >= 4) && (field == U3S_FRAME_EXTDAT || field == U3S_FRAME_CANCEL)) {
+        return (s32)((chain->words[frame->word + 3] >> ((field == U3S_FRAME_EXTDAT) ? 0 : 8)) & 0xFF);
+    }
+
+    return -0x8000;
+}
+
+int upper3s_chain_set_frames(Upper3sChain* chain, s16 at, s16 span, s16 field, s16 from, s16 to) {
+    Upper3sFrame chain_frames[U3S_CHAIN_MAX_FRAMES];
+    s32 n;
+    s32 i;
+    s32 elapsed = 0;
+    s32 stopped;
+    s32 first = -1;
+    s32 last = -1;
+
+    if ((chain == NULL) || (at < 0) || (span <= 0)) {
+        return 0;
+    }
+
+    n = upper3s_chain_frames(chain, chain_frames, U3S_CHAIN_MAX_FRAMES, &stopped);
+
+    for (i = 0; i < n; i++) {
+        if ((elapsed >= at) && (elapsed < at + span)) {
+            s32 now = upper3s_chain_frame_field(chain, &chain_frames[i], field);
+
+            if ((now != from) && (now != to)) {
+                /* Not the retail frames: nothing is written. */
+                return 0;
+            }
+
+            if (first < 0) {
+                if (elapsed != at) {
+                    return 0;
+                }
+
+                first = i;
+            }
+
+            last = i;
+        }
+
+        elapsed += chain_frames[i].hold;
+    }
+
+    if (first < 0) {
+        return 0;
+    }
+
+    for (i = first; i <= last; i++) {
+        s32 start = 0;
+        s32 k;
+
+        for (k = 0; k < i; k++) {
+            start += chain_frames[k].hold;
+        }
+
+        if (!upper3s_chain_set_frame(chain, (s16)start, field, from, to)) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 s32 upper3s_chain_list(const Upper3sChain* chain, Upper3sFrame* frames, s32 max) {
     s32 stopped;
 

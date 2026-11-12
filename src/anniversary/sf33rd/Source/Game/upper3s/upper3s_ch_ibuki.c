@@ -22,3 +22,8 @@
 u8 upper3s_ibuki_personal_action_tech_window(void) {
     return 0;
 }
+
+/* IB3, the kunai cancelled from Tsuiji Goe (upper3s_ch_ibuki.h). */
+int upper3s_ibuki_cancel_faces_opponent(s16 player_number, s16 koc, s16 char_index, s16 height) {
+    return (player_number == 7) && (koc == 5) && (char_index >= 107) && (char_index <= 110) && (height > 0);
+}

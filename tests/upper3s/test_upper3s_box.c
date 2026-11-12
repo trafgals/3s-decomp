@@ -129,6 +129,45 @@ int main(void) {
         check(wk.wu.h_att == retail, "effects are not changed");
     }
 
+    printf("\nmove boxes on one block of the animation\n");
+    {
+        static UNK_5 sets[4];
+        const Upper3sMoveBox moves[] = {
+            { 7, 5, 60, U3S_BOX_ATTACK, 2, 0, { 1, 2, 30, 4 }, { 1, 2, -10, 44 }, 4 }, /* block 3 only */
+            { -1, 0, 0, 0, 0, 0, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0 },
+        };
+
+        memset(&wk, 0, sizeof(wk));
+        memset(sets, 0, sizeof(sets));
+        wk.player_number = 7;
+        wk.wu.work_id = 1;
+        wk.wu.id = 0;
+        wk.wu.attack_adrs = sets;
+        sets[2].att_box[0][0] = 1;
+        sets[2].att_box[0][1] = 2;
+        sets[2].att_box[0][2] = 30;
+        sets[2].att_box[0][3] = 4;
+        wk.wu.now_koc = 5;
+        wk.wu.char_index = 60;
+        wk.wu.cg_ja.atix = 2;
+        wk.wu.cgd_type = 6;
+
+        wk.wu.cg_ix = 3 * 6;
+        wk.wu.h_att = &sets[2];
+        upper3s_box_frame_table(&wk.wu, moves);
+        check(wk.wu.h_att != &sets[2] && wk.wu.h_att->att_box[0][2] == -10, "the row applies on its block");
+
+        wk.wu.cg_ix = 5 * 6;
+        wk.wu.h_att = &sets[2];
+        upper3s_box_frame_table(&wk.wu, moves);
+        check(wk.wu.h_att == &sets[2], "another block using the same set keeps it");
+
+        wk.wu.cgd_type = 0;
+        wk.wu.cg_ix = 3 * 6;
+        upper3s_box_frame_table(&wk.wu, moves);
+        check(wk.wu.h_att == &sets[2], "a work without a block size is left alone");
+    }
+
     printf("\n%d checks, %d failures\n", checks, failures);
     return failures != 0;
 }

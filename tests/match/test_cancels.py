@@ -401,6 +401,199 @@ class TwelveBackForward(unittest.TestCase):
                          [[r["p"][0]["hix"] for r in rows if r["p"][0]["koc"] == 4] for rows in whiffs][1])
 
 
+class RemyTargetCombo(unittest.TestCase):
+    # RM5 "Decrease grounded opponent knockback on standing Forward (MK), enlarge hitboxes on 2nd hit of
+    # Target Combo (standing Forward->RH) so that it connects on everyone standing and most people
+    # crouching." The opponent stands or crouches from 20 frames before (no parry tap).
+    @staticmethod
+    def target_combo(victim, build, hold="5", d=30):
+        """The hits of s.MK -> s.HK on `victim`, the s.HK pressed on the frame the s.MK hits."""
+        lead = [f"20 5 {hold}"]
+        alone = F.run(lead + [f"1 5+MK {hold}", f"40 5 {hold}"], p1="remy", p2=victim, pos=(400, 400 + d), build=build)
+        h = F.first_hit(alone, start=20)
+        press = F.press_frame(alone, 0, start=20)
+        rows = F.run(lead + [f"1 5+MK {hold}", f"{h - press} 5 {hold}", f"1 5+HK {hold}", f"60 5 {hold}"], p1="remy", p2=victim,
+                     pos=(400, 400 + d), build=build)
+        return len([b for a, b in zip(rows, rows[1:]) if b["p"][1]["vit"] < a["p"][1]["vit"]])
+
+    def misses(self, build, hold, d):
+        return {c for c in F.CHARS if self.target_combo(c, build, hold, d) < 2}
+
+    def test_second_hit(self):
+        for d in (20, 50):
+            with self.subTest(d=d):
+                self.assertEqual(self.misses("vanilla", "5", d), {"yun", "oro", "yang"})
+                self.assertEqual(self.misses("upper3s", "5", d), set())
+                self.assertGreaterEqual(len(self.misses("vanilla", "2", d)), 19)
+                self.assertEqual(self.misses("upper3s", "2", d), {"elena", "oro", "chunli"})
+
+    def test_less_knockback_on_the_close_standing_forward(self):
+        def after(button, build, d):
+            rows = F.run(["20 5 5", f"1 5+{button}", "60 5"], p1="remy", p2="ken", pos=(400, 400 + d), build=build)
+            h = F.first_hit(rows, start=20)
+            return rows[h + 30]["p"][1]["x"] - rows[h + 30]["p"][0]["x"], F.hit_advantage(rows, start=20)
+
+        (gap_retail, adv_retail), (gap, adv) = after("MK", "vanilla", 30), after("MK", "upper3s", 30)
+        self.assertLess(gap, gap_retail)
+        self.assertEqual(adv, adv_retail)
+        # The far s.MK keeps its knockback (its advantage differs: RM4 raised its hitstun).
+        self.assertEqual(after("MK", "upper3s", 120)[0], after("MK", "vanilla", 120)[0])
+
+    def test_the_standing_roundhouse_alone_is_unchanged(self):
+        def bottoms(build):
+            rows = F.run(["20 5 5", "1 5+HK", "60 5"], p1="remy", p2="ken", pos=(300, 600), build=build)
+            return [(r["p"][0]["bx"][1], r["p"][0]["aby"]) for r in rows if r["p"][0]["aby"] >= 0]
+
+        self.assertEqual(bottoms("upper3s"), bottoms("vanilla"))
+
+
+class ChunLiTenseiRanka(unittest.TestCase):
+    # CL4 (the startup hitbox) "Tensei Ranka (SAIII) startup hitbox reaches down to the floor so it can't
+    # be crouched". Tensei Ranka is 236236+K, special animation 52; its startup hit is block 4 of the
+    # animation ("blk"), which shares box set 94 with the later hits.
+    @staticmethod
+    def tensei_ranka(victim, build, hold, d=50):
+        script = ["@stocks 1 3", f"20 5 {hold}"] + [" ".join(l.split()[:2] + [hold]) for l in F.motion("236236", "LK")] + [f"120 5 {hold}"]
+        return F.run(script, p1="chunli", p2=victim, sa1=2, pos=(400, 400 + d), build=build)
+
+    @staticmethod
+    def startup_hit(rows):
+        """Whether a hit lands on a frame after one of block 4 (the startup hit)."""
+        startup = {r["f"] for r in rows if r["p"][0]["koc"] == 5 and r["p"][0]["blk"] == 4 and r["p"][0]["bx"][1] == 94}
+        return any(b["f"] - 1 in startup and b["p"][1]["vit"] < a["p"][1]["vit"] for a, b in zip(rows, rows[1:]))
+
+    def test_the_startup_hit_cannot_be_crouched(self):
+        crouched = [c for c in F.CHARS if not self.startup_hit(self.tensei_ranka(c, "vanilla", "2"))]
+        self.assertGreaterEqual(len(crouched), 19)
+        for hold in ("2", "5"):
+            with self.subTest(hold=hold):
+                self.assertEqual([c for c in F.CHARS if not self.startup_hit(self.tensei_ranka(c, "upper3s", hold))], [])
+
+    def test_only_the_startup_box_changes(self):
+        def boxes(build):
+            rows = self.tensei_ranka("ken", build, "5", d=600)  # a whiff
+            return [(r["p"][0]["blk"], r["p"][0]["aby"]) for r in rows if r["p"][0]["koc"] == 5 and r["p"][0]["bx"][1] != 0]
+
+        retail, upper = boxes("vanilla"), boxes("upper3s")
+        self.assertEqual({a for b, a in retail if b == 4}, {26})
+        self.assertEqual({a for b, a in upper if b == 4}, {-76})
+        self.assertEqual([x for x in upper if x[0] != 4], [x for x in retail if x[0] != 4])
+
+
+class ChunLiCrouchingForward(unittest.TestCase):
+    # CL2 "Cancel window on cr.Fwd (c.MK) fixed to not allow super-late cancels." The c.MK's frames
+    # carry two cancel windows ("can" bits 0x60): one on the hit and a second one later; the second goes.
+    @staticmethod
+    def windows(build, defend="hit"):
+        """The runs of frames (from the press) whose cancel bits allow a special or super."""
+        hold = "1" if defend == "block" else "5"
+        rows = F.run(["20 5 5", f"1 2+MK {hold}", f"60 5 {hold}"], p1="chunli", p2="ken", pos=(400, 440), build=build)
+        press = F.press_frame(rows, 0, start=20)
+        frames = [r["f"] - press for r in rows[press:press + 60] if r["p"][0]["koc"] == 4 and r["p"][0]["can"] & 0x60]
+        runs = []
+        for f in frames:
+            if runs and f == runs[-1][1] + 1:
+                runs[-1][1] = f
+            else:
+                runs.append([f, f])
+        return [tuple(r) for r in runs]
+
+    @staticmethod
+    def super_at(build, k):
+        """Houyoku-sen (SA II, 236236+K) with its kick k frames after the c.MK's press: does it start?"""
+        motion = F.motion("236236", "LK")
+        lead = k - len(motion)  # the press is frame 0; each line of the motion is one frame, the kick on the last
+        rows = F.run(["@stocks 1 3", "20 5 5", "1 2+MK", f"{lead} 5"] + motion + F.wait(60), p1="chunli", p2="ken", sa1=1,
+                     pos=(400, 440), build=build)
+        return F.first(rows, lambda r: r["p"][0]["koc"] == 5, 20) is not None
+
+    def test_one_window(self):
+        for defend in ("hit", "block"):
+            with self.subTest(defend=defend):
+                retail, upper = self.windows("vanilla", defend), self.windows("upper3s", defend)
+                self.assertEqual(len(retail), 2)
+                self.assertEqual(upper, retail[:1])
+
+    def test_the_late_super_is_gone(self):
+        late = self.windows("vanilla")[1][0]
+        self.assertTrue(self.super_at("vanilla", late))
+        self.assertFalse(self.super_at("upper3s", late))
+        early = self.windows("vanilla")[0][0] + 2
+        self.assertTrue(self.super_at("upper3s", early))
+
+
+class IbukiTsuijiGoe(unittest.TestCase):
+    # IB3 "Allow Tsuiji Goe (623P, command jump) to be special- and super-cancelled much earlier in the
+    # animation, almost directly after takeoff; make Kunai cancelled from it face the correct direction
+    # if it hasn't passed over the opponent yet." Tsuiji Goe is special animations 107-110; the air kunai
+    # is 48. Ibuki turns round as she leaves the ground, so the kunai's motion is 214 on screen until she
+    # passes over the opponent (236 after).
+    @staticmethod
+    def kunai(build, k, d=300, dirs="214"):
+        """Tsuiji Goe (LP), then a kunai with its punch k frames after the press: (frame, facing the opponent)."""
+        m = F.motion(dirs, "LP")
+        rows = F.run(["20 5 5"] + F.motion("623", "LP") + [f"{k - len(m)} 5"] + m + F.wait(70), p1="ibuki", p2="ken",
+                     pos=(300, 300 + d), build=build)
+        press = F.press_frame(rows, 0, start=20)
+        f = F.first(rows, lambda r: r["p"][0]["koc"] == 5 and r["p"][0]["cix"] == 48, press)
+        if f is None:
+            return None
+        a, b = rows[f + 2]["p"]
+        return f - press, (a["rl"] == 1) == (b["x"] > a["x"])
+
+    def test_the_window_opens_after_takeoff(self):
+        for button, retail in (("LP", 28), ("MP", 29), ("HP", 33)):
+            with self.subTest(button=button):
+                out = {}
+                for build in ("vanilla", "upper3s"):
+                    rows = F.run(["20 5 5"] + F.motion("623", button) + F.wait(70), p1="ibuki", p2="ken", pos=(300, 700), build=build)
+                    press = F.press_frame(rows, 0, start=20)
+                    air = F.first(rows, lambda r: r["p"][0]["y"] > 0, press)
+                    can = F.first(rows, lambda r: r["p"][0]["koc"] == 5 and r["p"][0]["can"] & 0x60, press)
+                    out[build] = (air - press, can - press)
+                self.assertEqual(out["vanilla"][1], retail)
+                self.assertEqual(out["upper3s"][1], out["upper3s"][0] + 2)  # the second frame in the air
+
+    def test_an_early_kunai(self):
+        self.assertIsNone(self.kunai("vanilla", 20))
+        self.assertEqual(self.kunai("upper3s", 20), (20, True))
+        self.assertEqual(self.kunai("upper3s", 8), (9, True))
+
+    def test_the_kunai_faces_the_opponent(self):
+        self.assertEqual(self.kunai("vanilla", 30), (30, False))  # retail: thrown away before passing over
+        self.assertEqual(self.kunai("upper3s", 30), (30, True))
+        for build in ("vanilla", "upper3s"):  # after passing over: unchanged
+            with self.subTest(build=build):
+                self.assertEqual(self.kunai(build, 30, d=80, dirs="236"), (30, True))
+
+
+class SeanRoll(unittest.TestCase):
+    # SN2 "Allow Sean Roll (214P) to be super-cancelled during the middle." Sean Roll is special animations
+    # 48-50; the middle of the roll gets the super cancel bit (upper3s/pl15.c) and arms it itself
+    # (upper3s_ch_sean.c). The super is SA I, Hadou Burst (236236+P).
+    @staticmethod
+    def roll_super(build, button, k):
+        """Sean Roll, then Hadou Burst with its punch k frames after the roll's press: the frame it starts."""
+        m = F.motion("236236", "LP")
+        rows = F.run(["@stocks 1 3", "20 5 5"] + F.motion("214", button) + [f"{k - len(m)} 5"] + m + F.wait(70), p1="sean",
+                     p2="ken", sa1=0, pos=(300, 700), build=build)
+        press = F.press_frame(rows, 0, start=20)
+        roll = rows[press + 1]["p"][0]["cix"]
+        f = F.first(rows, lambda r: r["p"][0]["koc"] == 5 and r["p"][0]["cix"] != roll, press + 1)
+        return None if f is None else f - press
+
+    def test_in_the_middle(self):
+        for button, k in (("LP", 10), ("MP", 15), ("HP", 20)):
+            with self.subTest(button=button):
+                self.assertIsNone(self.roll_super("vanilla", button, k))
+                self.assertEqual(self.roll_super("upper3s", button, k), k)
+
+    def test_not_after_the_roll(self):
+        for button, k in (("LP", 18), ("MP", 28)):
+            with self.subTest(button=button):
+                self.assertIsNone(self.roll_super("upper3s", button, k))
+
+
 class QRushes(unittest.TestCase):
     # Q3 "Allow all overhead/low rushpunches ([4]6P/K/[P]) to be super-cancelled on hit/block/parry.
     # Make the riskier versions at least AS useful as the safe version." Q charges back for 50
