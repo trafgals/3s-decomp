@@ -27,3 +27,8 @@ u8 upper3s_ibuki_personal_action_tech_window(void) {
 int upper3s_ibuki_cancel_faces_opponent(s16 player_number, s16 koc, s16 char_index, s16 height) {
     return (player_number == 7) && (koc == 5) && (char_index >= 107) && (char_index <= 110) && (height > 0);
 }
+
+/* IB4, the Fierce of the target combos always resets (upper3s_ch_ibuki.h). */
+int upper3s_ibuki_tc_fierce_resets(s16 work_id, s16 player_number, s16 koc, s16 char_index) {
+    return (work_id == 1) && (player_number == 7) && (koc == 4) && (char_index == 165);
+}

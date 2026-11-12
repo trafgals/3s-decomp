@@ -3,7 +3,7 @@
 As of 2026-11-12. Open items are tracked as GitHub issues ([below](#github-issues)). Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
 
 <!-- summary:start -->
-**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 64 verified in a fight test, 2 done but not yet measured, 9 partial, 58 not done, 1 not needed in this version.
+**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 66 verified in a fight test, 2 done but not yet measured, 9 partial, 56 not done, 1 not needed in this version.
 <!-- summary:end -->
 
 ## How to read this
@@ -93,7 +93,7 @@ The post's order. The number after each name is the character index.
 | YU1 | Genei Jin (SA III) no longer makes all his normals count as super hits for priority. | find | — (PR #1 says the flag is in the disc data) |
 | YU2 | Genei Jin bar as long as Sourai Rengeki's; the super's timer is unchanged. `super_arts_data[3][2]` 72 → 88 | table | verified |
 | YU3 | Sourai Rengeki (SA II): 2 stocks instead of 3. `super_arts_data[3][1]` 88/3 → 88/2 | table | verified |
-| YU4 | Upkicks (623K) hitbox reaches further down. | disc | — (measured, not implemented: the four versions, special animations 32–35, use attack box sets 107 and 108, whose lowest edges are 66 and 69. Point-blank they miss every crouching character except Gill and Hugo; cancelled from s.LP, c.LP, c.MP, s.MP or close s.HP they miss 2 to 12 standing characters. With every box reaching further down: 20 lower hits all 20 crouching characters point-blank; 40 lower leaves one miss in the combos (close s.HP on crouching Chun-Li); 60 lower leaves none. The post says "misses less often", so how far is a choice) |
+| YU4 | Upkicks (623K) hitbox reaches further down. | disc | verified (`upper3s/upper3s_boxes.c`: the boxes of the four upkicks reach 40 lower, the amount chosen in issue #20. Retail missed every crouching character but Gill and Hugo point-blank, and 2-13 standing characters after a cancel from s.LP, c.LP, c.MP, s.MP or close s.HP; now no standing character is missed after those cancels, and crouching only Chun-Li after close s.HP) |
 
 ### Makoto (16)
 
@@ -184,7 +184,7 @@ The post's order. The number after each name is the character index.
 | IB1 | Health 1035 → 1050 (Twelve's). `Com_Vital_Unit_Data[7]` | table | verified |
 | IB2 | Yami Shigure (SA III): 2 stocks instead of 1. `super_arts_data[7][2]` 80/1 → 80/2 | table | verified |
 | IB3 | Tsuiji Goe (623P): special- and super-cancellable almost straight after takeoff; a kunai thrown from it faces the right way if she hasn't passed over the opponent. | disc | verified (`upper3s/pl06.c`: the cancel bits, from frame 28-33 in retail, now start on the second frame in the air, 2 frames after takeoff, for the four versions; `PLS03.c:hissatsu_setup_union()` turns her to the opponent when a move is cancelled out of it in the air, so a kunai thrown before she passes over flies at the opponent instead of away. With the test's 214 input the kunai does not come out on frames 11-12 after the press; not explained, the cancel bits are set there) |
-| IB4 | The target-combo s.HP (4MP→HP and LP→MP→HP) never knocks down. Today one of its two hitboxes is marked knockdown and the other isn't. | disc | — |
+| IB4 | The target-combo s.HP (4MP→HP and LP→MP→HP) never knocks down. Today one of its two hitboxes is marked knockdown and the other isn't. | disc | verified (`PLPDM.c`, `upper3s/upper3s_ch_ibuki.c`: both combos end in animation 165, whose Fierce gives an airborne opponent a "blow-away" whose result depends on the direction they fly, so retail reset 6 characters and knocked the others down; it now always resets. The post's "two hitboxes" is not the cause: the hitting box is never read) |
 | IB5 | Taunt: can't be throw-teched, and she can parry or attack in the air once the opponent recovers. | logic | partial (throw tech) |
 
 ### Necro (5)
