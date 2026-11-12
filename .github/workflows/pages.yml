@@ -17,6 +17,7 @@ on:
       - "include/**"
       - "Makefile"
       - "tools/web/**"
+      - "tools/verify/check_pages_workflow.py"
       - ".github/workflows/pages.yml"
 
 permissions:
@@ -35,6 +36,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: check the workflow guard
+        run: |
+          # The deploy job is guarded so that only main deploys; the guard is
+          # checked here so that a change that breaks it is caught by the
+          # workflow that carries it.
+          python3 -c "import yaml" || python3 -m pip install --quiet pyyaml
+          python3 tools/verify/check_pages_workflow.py
 
       - name: install the emscripten toolchain
         run: |
@@ -94,6 +103,16 @@ jobs:
 
   deploy:
     needs: build
+    # Only main publishes to Pages.  The github-pages environment has a
+    # deployment branch policy that lists the branches that may deploy, and
+    # a run of a branch that is not on that list is rejected by the policy:
+    # the build succeeds and the deploy job fails with "Branch ... is not
+    # allowed to deploy to github-pages due to environment protection rules".
+    # The guard below skips the deploy instead, so a push to a branch is a
+    # build check (the build job still runs and still has to pass) and the
+    # run is green.  A workflow_dispatch on a branch builds the site and
+    # does not deploy it either.
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
