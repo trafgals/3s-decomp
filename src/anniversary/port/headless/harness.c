@@ -487,7 +487,9 @@ static int attack_bottom(const WORK* w) {
 // frame's target combo route (PLS03.c:check_meoshi_cancel()), "swn" the command buffer's sw_new, "cab" the frame's catch box (cg_ja.caix), "bx" its body, attack, hosei and hand box sets (boix, atix,
 // hoix, bhix + haix; upper3s_box.h), "aby" attack_bottom(), "aho" att_hit_ok (an attack is armed and
 // can still hit; "anum" is its attack_num, a new number for each attack started, CHARSET.c:set_new_attnum()), "blk"
-// the block of the animation the frame is (cg_ix / cgd_type; command blocks count). "par" is the forward ground parry slot of the command buffer: its waza_flag[3] (the window: the parry is
+// the block of the animation the frame is (cg_ix / cgd_type; command blocks count), "dmp" the dm_point of
+// the last hit taken (the defender's box it landed on: 0-3 body, 4-7 limbs; HITCHECK.c), "rea" the reaction of the
+// player's current attack data (UNK_7.reaction: the damage routine a hit gives, before the air map). "par" is the forward ground parry slot of the command buffer: its waza_flag[3] (the window: the parry is
 // active while it is not 0) and its waza_work[id][3] w_type, shot_ok and free3 (the cooldown: the slot takes
 // no new tap while shot_ok >= 2 and w_type is 11, see CMD_MAIN.c:check_10()). "uk" is ukemi_success, set
 // when the down tap that techs a landing was in time.
@@ -499,7 +501,7 @@ static void log_player(const PLW* p) {
             "\"aix\":%d,\"can\":%d,\"pat\":%d,\"waza\":%d,\"hst\":%d,\"dst\":%d,\"vit\":%d,\"dmv\":%d,\"anum\":%d,"
             "\"pow\":%d,\"piyo\":%d,\"hsme\":%d,\"hsyou\":%d,\"guard\":%d,\"stun\":%d,\"stunmax\":%d,"
             "\"stunned\":%d,\"gauge\":%d,\"stock\":%d,\"stockmax\":%d,\"glen\":%d,\"in\":%d,\"char\":%d,"
-            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d,\"par\":[%d,%d,%d,%d],\"uk\":%d,\"hb\":%d,\"mu\":%d,\"sas\":%d,\"meo\":%d,\"swn\":%d,\"cab\":%d,\"bx\":[%d,%d,%d,%d],\"aby\":%d,\"aho\":%d,\"blk\":%d}",
+            "\"sa\":%d,\"ovit\":%d,\"gtot\":%d,\"gi\":%d,\"ren\":%d,\"par\":[%d,%d,%d,%d],\"uk\":%d,\"hb\":%d,\"mu\":%d,\"sas\":%d,\"meo\":%d,\"swn\":%d,\"cab\":%d,\"bx\":[%d,%d,%d,%d],\"aby\":%d,\"aho\":%d,\"blk\":%d,\"dmp\":%d,\"rea\":%d}",
             w->xyz[0].disp.pos, w->xyz[1].disp.pos, w->rl_flag, w->routine_no[0], w->routine_no[1],
             w->routine_no[2], w->routine_no[3], w->now_koc, w->char_index, w->cg_type, w->cg_hit_ix, w->cg_att_ix,
             w->cg_cancel, w->pat_status, w->kind_of_waza, w->hit_stop, w->dm_stop, w->vital_new, w->dm_vital,
@@ -512,7 +514,7 @@ static void log_player(const PLW* p) {
             p->cp ? p->cp->waza_flag[3] : -1, waza_work[w->id & 1][3].w_type, waza_work[w->id & 1][3].shot_ok,
             waza_work[w->id & 1][3].free3, p->ukemi_success, hurtboxes(w),
             p->zettai_muteki_flag, p->sa_stop_flag, w->cg_meoshi, p->cp ? p->cp->sw_new : -1, w->cg_ja.caix, w->cg_ja.boix,
-            w->cg_ja.atix, w->cg_ja.hoix, w->cg_ja.bhix + w->cg_ja.haix, attack_bottom(w), w->att_hit_ok, (w->cgd_type > 0) ? w->cg_ix / w->cgd_type : -1);
+            w->cg_ja.atix, w->cg_ja.hoix, w->cg_ja.bhix + w->cg_ja.haix, attack_bottom(w), w->att_hit_ok, (w->cgd_type > 0) ? w->cg_ix / w->cgd_type : -1, p->dm_point, w->att.reaction);
 }
 
 void harness_end_frame(unsigned long frame) {

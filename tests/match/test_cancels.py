@@ -594,6 +594,109 @@ class SeanRoll(unittest.TestCase):
                 self.assertIsNone(self.roll_super("upper3s", button, k))
 
 
+class YunUpkicks(unittest.TestCase):
+    # YU4 "Upkicks (623K) hitbox adjusted to reach further downward, so it misses standing/crouching
+    # opponents less often." The upkicks are special animations 32-35 (box sets 107 and 108); the amount
+    # (40 lower) is the user's choice from the measurements in issue #20. The opponent stands or crouches
+    # from 20 frames before.
+    @staticmethod
+    def upkicks(victim, build, hold, normal=None, d=40):
+        """Hits of the LK upkicks on `victim`, alone or cancelled from `normal` on the frame it hits."""
+        lead = [f"20 5 {hold}"]
+        kick = [" ".join(l.split()[:2] + [hold]) for l in F.motion("623", "LK")]
+        if normal is None:
+            rows = F.run(lead + kick + [f"60 5 {hold}"], p1="yun", p2=victim, pos=(400, 400 + d), build=build)
+            start = 20
+        else:
+            alone = F.run(lead + [f"1 {normal} {hold}", f"60 5 {hold}"], p1="yun", p2=victim, pos=(400, 400 + d), build=build)
+            h = F.first_hit(alone, start=20)
+            press = F.press_frame(alone, 0, start=20)
+            rows = F.run(lead + [f"1 {normal} {hold}", f"{h - press} 5 {hold}"] + kick + [f"60 5 {hold}"], p1="yun",
+                         p2=victim, pos=(400, 400 + d), build=build)
+            start = h + 1
+        s = F.first(rows, lambda r: r["p"][0]["koc"] == 5, start)
+        return len([b for a, b in zip(rows, rows[1:]) if b["f"] >= s and b["p"][1]["vit"] < a["p"][1]["vit"]])
+
+    def misses(self, build, hold, normal=None):
+        return {c for c in F.CHARS if self.upkicks(c, build, hold, normal) == 0}
+
+    def test_crouching_point_blank(self):
+        self.assertGreaterEqual(len(self.misses("vanilla", "2")), 15)
+        self.assertEqual(self.misses("upper3s", "2"), set())
+
+    def test_standing_after_a_cancel(self):
+        self.assertGreaterEqual(len(self.misses("vanilla", "5", "5+MP")), 10)
+        for normal in ("5+LP", "2+LP", "2+MP", "5+MP", "5+HP"):
+            with self.subTest(normal=normal):
+                self.assertEqual(self.misses("upper3s", "5", normal), set())
+
+    def test_crouching_after_a_cancel(self):
+        for normal, left in (("5+MP", set()), ("2+MK", set()), ("5+HP", {"chunli"})):
+            with self.subTest(normal=normal):
+                self.assertGreaterEqual(len(self.misses("vanilla", "2", normal)), 18)
+                self.assertEqual(self.misses("upper3s", "2", normal), left)
+
+    def test_only_the_upkicks_change(self):
+        def bottoms(lines, build):
+            rows = F.run(["20 5 5"] + lines + F.wait(60), p1="yun", p2="ken", pos=(300, 700), build=build)
+            return [(r["p"][0]["bx"][1], r["p"][0]["aby"]) for r in rows if r["p"][0]["bx"][1] != 0]
+
+        retail, upper = bottoms(F.motion("623", "LK"), "vanilla"), bottoms(F.motion("623", "LK"), "upper3s")
+        self.assertEqual({a for s, a in retail}, {66, 69})
+        self.assertEqual({a for s, a in upper}, {26, 29})
+        for lines in (["1 5+HK"], ["1 2+HK"], F.motion("236", "LP")):
+            with self.subTest(lines=lines):
+                self.assertEqual(bottoms(lines, "upper3s"), bottoms(lines, "vanilla"))
+
+
+class IbukiTargetComboFierce(unittest.TestCase):
+    # IB4 "Fix the unique-animation standing Fierce in her Target Combos (B+Strong->Fierce and
+    # Jab->Strong(1)->Fierce) to never knock down ... "always reset" is preferable". Both target combos end
+    # in normal animation 165; its Fierce on an airborne opponent knocked down or reset depending on the
+    # direction they flew (upper3s_ch_ibuki.h). The opponent jumps straight up; Ibuki's 4MP catches them
+    # in the air w frames after the jump, and the Fierce follows on the frame it hits.
+    @staticmethod
+    def outcome(victim, build, w, d=50):
+        lead = ["20 5 5", "1 5 8"]
+        alone = F.run(lead + [f"{w} 5 5", "1 4+MP 5", "80 5 5"], p1="ibuki", p2=victim, pos=(400, 400 + d), build=build)
+        h = F.first_hit(alone, start=21)
+        if h is None or alone[h]["p"][1]["y"] <= 0:
+            return None
+        press = F.press_frame(alone, 0, start=21)
+        rows = F.run(lead + [f"{w} 5 5", "1 4+MP 5", f"{h - press} 5 5", "1 5+HP 5", "90 5 5"], p1="ibuki", p2=victim,
+                     pos=(400, 400 + d), build=build)
+        hits = [b["f"] for a, b in zip(rows, rows[1:]) if b["p"][1]["vit"] < a["p"][1]["vit"]]
+        if len(hits) < 2:
+            return None
+        return "down" if any(r["p"][1]["pat"] == 38 for r in rows[hits[1]:hits[1] + 90]) else "reset"
+
+    def outcomes(self, build):
+        out = {}
+        for c in F.CHARS:
+            got = {o for o in (self.outcome(c, build, w) for w in (0, 1, 26, 28)) if o}
+            if got:
+                out[c] = got
+        return out
+
+    def test_always_reset(self):
+        retail, upper = self.outcomes("vanilla"), self.outcomes("upper3s")
+        self.assertEqual(retail["ken"], {"down"})
+        self.assertEqual(retail["yun"], {"reset"})
+        self.assertGreaterEqual(len(upper), 19)
+        self.assertEqual({c for c, o in upper.items() if o != {"reset"}}, set())
+
+    def test_on_the_ground_it_is_unchanged(self):
+        def tc(build):
+            alone = F.run(["20 5 5", "1 4+MP", "60 5"], p1="ibuki", p2="ken", pos=(400, 440), build=build)
+            h = F.first_hit(alone, start=20)
+            press = F.press_frame(alone, 0, start=20)
+            rows = F.run(["20 5 5", "1 4+MP", f"{h - press} 5", "1 5+HP", "60 5"], p1="ibuki", p2="ken", pos=(400, 440), build=build)
+            hits = [b["f"] for a, b in zip(rows, rows[1:]) if b["p"][1]["vit"] < a["p"][1]["vit"]]
+            return hits, F.hit_advantage(rows, start=hits[1] - 1), [r["p"][1]["rno"][2] for r in rows[hits[1]:hits[1] + 20]]
+
+        self.assertEqual(tc("upper3s"), tc("vanilla"))
+
+
 class QRushes(unittest.TestCase):
     # Q3 "Allow all overhead/low rushpunches ([4]6P/K/[P]) to be super-cancelled on hit/block/parry.
     # Make the riskier versions at least AS useful as the safe version." Q charges back for 50

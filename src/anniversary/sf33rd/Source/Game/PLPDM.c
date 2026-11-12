@@ -24,6 +24,10 @@
 #include "sf33rd/Source/Game/sc_sub.h"
 #include "sf33rd/Source/Game/workuser.h"
 
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s_ch_ibuki.h"
+#endif
+
 void setup_damage_process_flags(PLW* wk);
 void Damage_00000(PLW* wk);
 void Damage_01000(PLW* wk);
@@ -1680,6 +1684,18 @@ void get_damage_reaction_data(PLW* wk) {
 
     if (wk->wu.routine_no[2] == 88) {
         wk->wu.routine_no[2] = check_buttobi_type(wk);
+#if defined(UPPER_3S)
+        // Third Strike Upper (IB4): the Fierce of Ibuki's target combos resets an airborne opponent, whatever
+        // the direction they fly in: the direction's reaction (97 or 98, a knockdown) goes back to 88, the
+        // reset, which the other directions give (upper3s_ch_ibuki.h).
+        if ((wk->wu.dmg_work_id == 1) && (wk->wu.dmg_adrs != NULL)) {
+            PLW* as = (PLW*)wk->wu.dmg_adrs;
+
+            if (upper3s_ibuki_tc_fierce_resets(as->wu.work_id, as->player_number, as->wu.now_koc, as->wu.char_index)) {
+                wk->wu.routine_no[2] = U3S_IBUKI_AIR_RESET_REACTION;
+            }
+        }
+#endif
     }
 
     if (wk->py->flag && wk->wu.routine_no[2] == 88) {

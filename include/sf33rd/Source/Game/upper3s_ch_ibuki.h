@@ -61,4 +61,32 @@ u8 upper3s_ibuki_personal_action_tech_window(void);
  */
 int upper3s_ibuki_cancel_faces_opponent(s16 player_number, s16 koc, s16 char_index, s16 height);
 
+/*
+ * Ibuki - IB4, "Fix the unique-animation standing Fierce in her Target Combos
+ * (B+Strong->Fierce and Jab->Strong(1)->Fierce) to never knock down, instead of
+ * sometimes resetting and sometimes knocking down. ... it seems "always reset"
+ * is preferable to "always knock down"."
+ *
+ * Found (tests/match): both target combos end in normal animation 165, whose
+ * Fierce (attack entry 48, reaction 32) gives an airborne opponent reaction 88,
+ * a "blow-away". PLPDM.c:get_damage_reaction_data() replaces 88 with the
+ * reaction of the direction the opponent is about to fly
+ * (PLS02.c:check_buttobi_type(), dir32_skydm[]): 88 again for most directions,
+ * 97 or 98 for the others, and a reaction is an index of dm_reaction_table[],
+ * whose r_no is the damage routine: 88 is routine 17, an air reset, 97 is 20, a
+ * knockdown. So the result depends on the character's flight: in the retail
+ * game Yun, Ibuki, Elena, Oro, Yang and Makoto are reset, the others knocked
+ * down. (The post's reading, two hitboxes of which one knocks down, is not what
+ * the engine does: the attacker's box that hits is never read.) The fix puts
+ * the result back to 88, the reset, after the direction is looked at (the look
+ * also sets up the flight, PLS02.c:setup_butt_own_data()).
+ *
+ * Returns 1 when a hit of reaction 88 is to stay the reset: it came from a
+ * player (work_id 1) that is Ibuki, in normal animation 165.
+ */
+int upper3s_ibuki_tc_fierce_resets(s16 work_id, s16 player_number, s16 koc, s16 char_index);
+
+/* The reaction of the air reset (dm_reaction_table[88], damage routine 17). */
+#define U3S_IBUKI_AIR_RESET_REACTION 88
+
 #endif

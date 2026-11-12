@@ -73,5 +73,33 @@ const Upper3sMoveBox upper3s_move_boxes[] = {
      * goes to -76, the floor on the highest of the three frames; its top (77) is unchanged.
      */
     { 15, 5, 52, U3S_BOX_ATTACK, 94, 0, { -59, 45, 26, 51 }, { -59, 45, -76, 153 }, 5 }, /* CL4: block 4 reaches the floor */
+    /*
+     * YU4 - "Upkicks (623K) hitbox adjusted to reach further downward, so it misses standing/crouching
+     * opponents less often. Bugfix."
+     *
+     * The upkicks are special animations 32-35 of Yun (LK, MK, HK, EX), with attack box sets 107 and
+     * 108 (lowest edges 66 and 69). Measured: point-blank they miss every crouching character but
+     * Gill and Hugo, and cancelled from s.LP, c.LP, c.MP, s.MP or close s.HP they miss 2 to 12
+     * standing characters. The post gives no amount, so the value is the user's choice (issue #20):
+     * 40 lower, the least of the measured values with which no standing character is missed after
+     * any of those cancels (20 still left 3 after s.MP and s.HP, 30 three after s.HP, 38 two). Each
+     * box reaches 40 further down, its top unchanged, on the four animations only.
+     */
+    { 3, 5, 32, U3S_BOX_ATTACK, 107, 0, { -48, 24, 90, 27 }, { -48, 24, 50, 67 } }, /* YU4: LK, 40 lower */
+    { 3, 5, 32, U3S_BOX_ATTACK, 107, 1, { -35, 24, 66, 24 }, { -35, 24, 26, 64 } }, /* YU4: LK, 40 lower */
+    { 3, 5, 32, U3S_BOX_ATTACK, 108, 0, { -58, 24, 81, 27 }, { -58, 24, 41, 67 } }, /* YU4: LK, 40 lower */
+    { 3, 5, 32, U3S_BOX_ATTACK, 108, 1, { -43, 24, 69, 24 }, { -43, 24, 29, 64 } }, /* YU4: LK, 40 lower */
+    { 3, 5, 33, U3S_BOX_ATTACK, 107, 0, { -48, 24, 90, 27 }, { -48, 24, 50, 67 } }, /* YU4: MK, 40 lower */
+    { 3, 5, 33, U3S_BOX_ATTACK, 107, 1, { -35, 24, 66, 24 }, { -35, 24, 26, 64 } }, /* YU4: MK, 40 lower */
+    { 3, 5, 33, U3S_BOX_ATTACK, 108, 0, { -58, 24, 81, 27 }, { -58, 24, 41, 67 } }, /* YU4: MK, 40 lower */
+    { 3, 5, 33, U3S_BOX_ATTACK, 108, 1, { -43, 24, 69, 24 }, { -43, 24, 29, 64 } }, /* YU4: MK, 40 lower */
+    { 3, 5, 34, U3S_BOX_ATTACK, 107, 0, { -48, 24, 90, 27 }, { -48, 24, 50, 67 } }, /* YU4: HK, 40 lower */
+    { 3, 5, 34, U3S_BOX_ATTACK, 107, 1, { -35, 24, 66, 24 }, { -35, 24, 26, 64 } }, /* YU4: HK, 40 lower */
+    { 3, 5, 34, U3S_BOX_ATTACK, 108, 0, { -58, 24, 81, 27 }, { -58, 24, 41, 67 } }, /* YU4: HK, 40 lower */
+    { 3, 5, 34, U3S_BOX_ATTACK, 108, 1, { -43, 24, 69, 24 }, { -43, 24, 29, 64 } }, /* YU4: HK, 40 lower */
+    { 3, 5, 35, U3S_BOX_ATTACK, 107, 0, { -48, 24, 90, 27 }, { -48, 24, 50, 67 } }, /* YU4: EX, 40 lower */
+    { 3, 5, 35, U3S_BOX_ATTACK, 107, 1, { -35, 24, 66, 24 }, { -35, 24, 26, 64 } }, /* YU4: EX, 40 lower */
+    { 3, 5, 35, U3S_BOX_ATTACK, 108, 0, { -58, 24, 81, 27 }, { -58, 24, 41, 67 } }, /* YU4: EX, 40 lower */
+    { 3, 5, 35, U3S_BOX_ATTACK, 108, 1, { -43, 24, 69, 24 }, { -43, 24, 29, 64 } }, /* YU4: EX, 40 lower */
     { -1, 0, 0, 0, 0, 0, { 0, 0, 0, 0 }, { 0, 0, 0, 0 } } /* terminator */
 };

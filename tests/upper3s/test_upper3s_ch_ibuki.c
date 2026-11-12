@@ -128,7 +128,18 @@ static void test_a_cancel_out_of_tsuiji_goe_faces_the_opponent(void) {
     check(!upper3s_ibuki_cancel_faces_opponent(2, 5, 107, 30), "not another character");
 }
 
+static void test_the_target_combo_fierce_resets(void) {
+    printf("IB4: the Fierce of the target combos resets an airborne opponent\n");
+    check(upper3s_ibuki_tc_fierce_resets(1, 7, 4, 165), "Ibuki in animation 165");
+    check(!upper3s_ibuki_tc_fierce_resets(2, 7, 4, 165), "not a hit from an effect");
+    check(!upper3s_ibuki_tc_fierce_resets(1, 7, 4, 162), "not the first part of the LP-MP-HP combo");
+    check(!upper3s_ibuki_tc_fierce_resets(1, 7, 5, 165), "not a special with the same index");
+    check(!upper3s_ibuki_tc_fierce_resets(1, 2, 4, 165), "not another character");
+    check(U3S_IBUKI_AIR_RESET_REACTION == 88, "the reset is reaction 88 (damage routine 17)");
+}
+
 int main(void) {
+    test_the_target_combo_fierce_resets();
     test_a_cancel_out_of_tsuiji_goe_faces_the_opponent();
     test_the_personal_action_cannot_be_teched();
     test_an_open_window_is_closed();
