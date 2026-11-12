@@ -75,3 +75,60 @@ s16 upper3s_apply_boxes(PLW* wk, const Upper3sBox* table) {
 
     return failed;
 }
+
+/* The copies of the sets the hit check is given, one per player slot. */
+static UNK_5 upper3s_box_attack_copy[2];
+
+void upper3s_box_frame_table(WORK* wk, const Upper3sMoveBox* table) {
+    PLW* plw_wk = (PLW*)wk;
+    s16 i;
+    s16 k;
+
+    if ((wk->work_id != 1) || (table == NULL) || (wk->id < 0) || (wk->id > 1) || (wk->attack_adrs == NULL)) {
+        return;
+    }
+
+    for (i = 0; table[i].char_id >= 0; i++) {
+        const Upper3sMoveBox* row = &table[i];
+        UNK_5* copy = &upper3s_box_attack_copy[wk->id];
+        const s16* box;
+
+        if ((row->char_id != plw_wk->player_number) || (row->koc != wk->now_koc) ||
+            (row->char_index != wk->char_index) || (row->kind != U3S_BOX_ATTACK) || (row->index != wk->cg_ja.atix)) {
+            continue;
+        }
+
+        box = wk->attack_adrs[row->index].att_box[row->box];
+
+        if (!upper3s_box_is(box, row->from)) {
+            /* Not the retail box. */
+            continue;
+        }
+
+        *copy = wk->attack_adrs[row->index];
+
+        for (k = 0; k < 4; k++) {
+            copy->att_box[row->box][k] = row->to[k];
+        }
+
+        /* Further rows may change other boxes of the same set: they are applied to the copy. */
+        for (i = (s16)(i + 1); table[i].char_id >= 0; i++) {
+            const Upper3sMoveBox* more = &table[i];
+
+            if ((more->char_id == row->char_id) && (more->koc == row->koc) && (more->char_index == row->char_index) &&
+                (more->kind == U3S_BOX_ATTACK) && (more->index == row->index) &&
+                upper3s_box_is(wk->attack_adrs[more->index].att_box[more->box], more->from)) {
+                for (k = 0; k < 4; k++) {
+                    copy->att_box[more->box][k] = more->to[k];
+                }
+            }
+        }
+
+        wk->h_att = copy;
+        return;
+    }
+}
+
+void upper3s_box_frame(WORK* wk) {
+    upper3s_box_frame_table(wk, upper3s_move_boxes);
+}

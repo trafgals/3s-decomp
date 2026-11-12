@@ -3,7 +3,7 @@
 As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
 
 <!-- summary:start -->
-**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 57 verified in a fight test, 2 done but not yet measured, 9 partial, 65 not done, 1 not needed in this version.
+**134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 58 verified in a fight test, 2 done but not yet measured, 9 partial, 64 not done, 1 not needed in this version.
 <!-- summary:end -->
 
 ## How to read this
@@ -34,7 +34,7 @@ As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://m
 | I1 | A 3s' build | **Done on this branch** for the host builds: `UPPER_3S=1` with `PLATFORM=linux`, `web` or `headless`. A 3s' PS2 ELF is not possible yet: the PS2 rule always byte-compares against `THIRD_U.BIN`. |
 | I2 | Something to play it on | **On this branch**: the SDL3 port (`PLATFORM=linux`, needs SDL3 and ffmpeg) and the WebAssembly port from PR #1, and the headless port for tests. The published site (trafgals.github.io/3s-decomp) still runs PR #1's code, without the fixes of this branch. |
 | I3 | A test harness | **Done on this branch**: `make test` (unit tests on synthetic characters) and `make match-test` (fight tests in the real engine, `tests/match/`). |
-| I4 | A way to change disc data | **On this branch** (from PR #1): `upper3s/upper3s_dump.c`, `upper3s/upper3s_chain.c`, `tools/upper3s/`. The fight tests found and this branch fixed that the hitstun/knockback overrides wrote to the wrong attack entry. The chain walker's startups agree with the spec's retail numbers on every move measured so far. Patch kinds: damage, stun, knockback, hitstun, startup, recovery, and the tail of a chain from a given frame (`U3S_MV_TAIL`, for moves whose chain has no attack data). Not yet: hit, hurt, throw and push boxes, cancel windows per frame (the cancel rules use the frames' own bits, their active frames and hitstops), and new moves. |
+| I4 | A way to change disc data | **On this branch** (from PR #1): `upper3s/upper3s_dump.c`, `upper3s/upper3s_chain.c`, `tools/upper3s/`. The fight tests found and this branch fixed that the hitstun/knockback overrides wrote to the wrong attack entry. The chain walker's startups agree with the spec's retail numbers on every move measured so far. Patch kinds: damage, stun, knockback, hitstun, startup, recovery, the tail of a chain from a given frame (`U3S_MV_TAIL`, for moves whose chain has no attack data), and a move's attack boxes (`upper3s/upper3s_box.c`: `upper3s_move_boxes[]` swaps a box of one move's frames for another, on a copy, so other moves sharing the box are unchanged). Not yet: hurt, throw and push boxes, cancel windows per frame (the cancel rules use the frames' own bits, their active frames and hitstops), and new moves. |
 | I5 | Specials are unnamed | **On this branch** (from PR #1): `tools/upper3s/decode_cmd.py` reads `cmd_data.c` and `bin2obj/asstbl.c`. The fight tests identify a move by its effect (`koc` and `cix` in the log). |
 | I6 | Guarding the vanilla build without the game file | **On this branch** (from PR #1): `tools/verify/ps2_touched_sources.sh` compares the preprocessed PS2 sources with those of the retail-matched commit. |
 | I7 | Leftover assembly (not a blocker) | Two game functions (`MTRANS` `mlt_obj_trans_rgb_ext`, `end_20` `sea_write`) and `EFFXX`'s two effect jump tables (`effmovejptbl`, `effinitjptbl`) are still included from assembly, and 6 CRI functions are not decompiled. They link as they are. |
@@ -152,7 +152,7 @@ The post's order. The number after each name is the character index.
 | RY1 | 6MP: less knockback on hit, so links after it are reliable. | disc | partial (the knockback is one step less: Ken leaves hitstun 101 apart instead of 113; but 6MP is +1 on hit and no normal or super of Ryu's links after it in this version, with this knockback or the smallest one, so the "links" part cannot be shown) |
 | RY2 | Target combo far s.HP→s.HK: more forward movement on the 2nd hit. | disc | — |
 | RY3 | More hitstun on far s.MK, s.HK, close s.HP, c.HP, c.LK and c.MK, so none is negative on hit. | disc | verified |
-| RY4 | LK Joudan Sokutou Geri (41236LK): hitbox extends down so it connects after close s.HP / c.HP on everyone. | disc | — |
+| RY4 | LK Joudan Sokutou Geri (41236LK): hitbox extends down so it connects after close s.HP / c.HP on everyone. | disc | verified (`upper3s/upper3s_boxes.c`: the four attack boxes of the LK kick's animation reach 20 lower; after close s.HP on a crouching opponent it hit 5 of the 20 characters and now hits all 20; after c.HP it already connected; MK and HK, which share the boxes, are unchanged) |
 | RY5 | LP/MP DP knock opponents up less, and so do Shinkuu Hadoken's (SA I) middle hits, so the whole super connects after a DP. | disc | — |
 
 ### Oro (9)

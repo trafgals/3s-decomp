@@ -14,6 +14,10 @@
 #include "sf33rd/Source/Game/cmd_data.h"
 #include "sf33rd/Source/Game/workuser.h"
 
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s_box.h"
+#endif
+
 #define LO_2_BYTES(_val) (((s16*)&_val)[0])
 #define HI_2_BYTES(_val) (((s16*)&_val)[1])
 #define WK_AS_PLW ((PLW*)wk)
@@ -2844,6 +2848,10 @@ void set_jugde_area(WORK* wk) {
     wk->h_att = wk->attack_adrs + wk->cg_ja.atix;
     wk->h_hos = wk->hosei_adrs + wk->cg_ja.hoix;
     wk->h_han = wk->hand_adrs + (wk->cg_ja.bhix + wk->cg_ja.haix);
+#if defined(UPPER_3S)
+    // Third Strike Upper: box changes for the frames of one move (upper3s_box.h).
+    upper3s_box_frame(wk);
+#endif
 }
 
 void get_char_data_zanzou(WORK* wk) {

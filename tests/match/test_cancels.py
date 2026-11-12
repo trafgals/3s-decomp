@@ -281,6 +281,39 @@ class SeanTackle(unittest.TestCase):
         self.assertEqual(self.tackle("MP", 5, "upper3s")[:2], self.tackle("MP", 5, "vanilla")[:2])
 
 
+class RyuJoudan(unittest.TestCase):
+    # RY4 "Expand hitbox on LK Joudan Sokutou Geri (41236LK) downward so that it will not miss on
+    # some characters after close Fierce (HP) or crouching Fierce (2HP)." Measured: after close s.HP
+    # on a crouching opponent it misses 15 of the 20 characters; after c.HP it does not miss.
+    @staticmethod
+    def connects(normal, victim, build, kick="LK"):
+        v = "2"  # the victim crouches
+        alone = F.run([f"1 {normal} {v}", f"60 5 {v}"], p1="ryu", p2=victim, pos=(400, 440), build=build)
+        h = F.first_hit(alone)
+        press = F.press_frame(alone, 0)
+        rows = F.run([f"1 {normal} {v}", f"{h - press} 5 {v}"] + [" ".join(l.split()[:2] + [v]) for l in F.motion("41236", kick)]
+                     + [f"60 5 {v}"], p1="ryu", p2=victim, pos=(400, 440), build=build)
+        return len([b for a, b in zip(rows, rows[1:]) if b["p"][1]["vit"] < a["p"][1]["vit"]]) >= 2
+
+    def test_after_close_fierce(self):
+        missed = [c for c in F.CHARS if not self.connects("5+HP", c, "vanilla")]
+        self.assertGreaterEqual(len(missed), 10)
+        self.assertEqual([c for c in F.CHARS if not self.connects("5+HP", c, "upper3s")], [])
+
+    def test_only_the_lk_boxes_change(self):
+        # MK and HK share the LK one's boxes in the data; only the LK animation is changed. "aby" is
+        # the lowest bottom edge of the attack boxes the hit check is given on a frame.
+        def bottoms(kick, build):
+            rows = F.run(F.motion("41236", kick) + F.wait(40), p1="ryu", p2="ken", pos=(300, 600), build=build)
+            return [r["p"][0]["aby"] for r in rows if r["p"][0]["aby"] >= 0]
+
+        self.assertEqual(bottoms("LK", "vanilla"), [50, 72, 72])
+        self.assertEqual(bottoms("LK", "upper3s"), [30, 52, 52])
+        for kick in ("MK", "HK"):
+            with self.subTest(kick=kick):
+                self.assertEqual(bottoms(kick, "upper3s"), bottoms(kick, "vanilla"))
+
+
 class QRushes(unittest.TestCase):
     # Q3 "Allow all overhead/low rushpunches ([4]6P/K/[P]) to be super-cancelled on hit/block/parry.
     # Make the riskier versions at least AS useful as the safe version." Q charges back for 50

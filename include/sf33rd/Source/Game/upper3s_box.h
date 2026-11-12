@@ -44,6 +44,34 @@ typedef struct {
     s16 to[4];   /* the 3s' box */
 } Upper3sBox;
 
+/*
+ * A change of a box for the frames of one move only. A box set is often shared by
+ * several moves (the three Joudan Sokutou Geri of Ryu use the same attack boxes), so a
+ * change of the set itself would change all of them. A row of this kind leaves the
+ * set alone: on the frames of the animation `char_index` (WORK.char_index) of the slot
+ * `koc` of the character, when the frame uses the set `index`, the hit check is given a
+ * copy of the set with the box changed (upper3s_box_frame(), called by
+ * CHARSET.c:set_jugde_area()). Only attack boxes for now.
+ */
+typedef struct {
+    s16 char_id; /* -1 ends the table */
+    s16 koc;
+    s16 char_index;
+    s16 kind;    /* U3S_BOX_ATTACK */
+    s16 index;
+    s16 box;
+    s16 from[4];
+    s16 to[4];
+} Upper3sMoveBox;
+
+extern const Upper3sMoveBox upper3s_move_boxes[];
+
+/* Called on every frame of a work after its box pointers are set (players only). */
+void upper3s_box_frame(WORK* wk);
+
+/* The same with another table, for the tests. */
+void upper3s_box_frame_table(WORK* wk, const Upper3sMoveBox* table);
+
 /* The changes, defined by upper3s/upper3s_boxes.c. */
 extern const Upper3sBox upper3s_boxes[];
 
