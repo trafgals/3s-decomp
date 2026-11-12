@@ -93,7 +93,7 @@ The post's order. The number after each name is the character index.
 | YU1 | Genei Jin (SA III) no longer makes all his normals count as super hits for priority. | find | — (PR #1 says the flag is in the disc data) |
 | YU2 | Genei Jin bar as long as Sourai Rengeki's; the super's timer is unchanged. `super_arts_data[3][2]` 72 → 88 | table | verified |
 | YU3 | Sourai Rengeki (SA II): 2 stocks instead of 3. `super_arts_data[3][1]` 88/3 → 88/2 | table | verified |
-| YU4 | Upkicks (623K) hitbox reaches further down. | disc | — |
+| YU4 | Upkicks (623K) hitbox reaches further down. | disc | — (measured, not implemented: the four versions, special animations 32–35, use attack box sets 107 and 108, whose lowest edges are 66 and 69. Point-blank they miss every crouching character except Gill and Hugo; cancelled from s.LP, c.LP, c.MP, s.MP or close s.HP they miss 2 to 12 standing characters. With every box reaching further down: 20 lower hits all 20 crouching characters point-blank; 40 lower leaves one miss in the combos (close s.HP on crouching Chun-Li); 60 lower leaves none. The post says "misses less often", so how far is a choice) |
 
 ### Makoto (16)
 
