@@ -1,6 +1,6 @@
 # Third Strike Upper (3s') — itemised remaining work
 
-As of 2026-11-11. Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
+As of 2026-11-12. Open items are tracked as GitHub issues ([below](#github-issues)). Spec: [What I'd Change For Third Strike Upper (3s')](https://mikezsez.blogspot.com/2015/12/what-id-change-for-third-strike-upper-3s.html). Where things live in the source: [`AGENTS.md` §3](../../AGENTS.md).
 
 <!-- summary:start -->
 **134 work items** (plus 5 "no change" items). On `main`: all 134 open. On this branch: 58 verified in a fight test, 2 done but not yet measured, 9 partial, 64 not done, 1 not needed in this version.
@@ -324,3 +324,27 @@ No changes in the post.
 3. **HU5: check the move.** PR #1 reads the Meat Squasher's startup from the disc as 24/52/67, against the post's 21/31/44; light is close, medium and heavy are far off.
 4. **SN3 and SN9 are partial.** The three Ryuubi Kyaku share one chain, so all three are 19 frames (the spec asks 17/19/21) and the Roundhouse knockdown is not done. EX Dragon Smash is 5 frames (the spec asks 3), because the chain cannot be held shorter.
 5. **Documentation errors.** Issue #2 says `plpat16.c` is Makoto (it is Chun-Li; Makoto is `plpat17.c`, AGENTS.md §3.2). Chun-Li's table header calls SA I "Houyoku-sen" (it is Kikoushou). PR #1's table for Q labels entry 1 as "6LP"; in the game it is the far standing Jab.
+
+## GitHub issues
+
+Every item that is not `verified` or `n/a` has an issue, under the tracking issue [#3](https://github.com/trafgals/3s-decomp/issues/3). The issues repeat the rows above, with notes on how to make the change; this file stays the source of each item's status.
+
+- Infrastructure: missing disc patch kinds (I4) [#4](https://github.com/trafgals/3s-decomp/issues/4), the SDL port in GitHub Actions [#5](https://github.com/trafgals/3s-decomp/issues/5), a CI completeness check [#7](https://github.com/trafgals/3s-decomp/issues/7), a 3s' PS2 build and the published web build (I1/I2) [#8](https://github.com/trafgals/3s-decomp/issues/8), doc errors [#6](https://github.com/trafgals/3s-decomp/issues/6).
+- Bugfix: B2 [#14](https://github.com/trafgals/3s-decomp/issues/14), B5 [#9](https://github.com/trafgals/3s-decomp/issues/9), B6 [#10](https://github.com/trafgals/3s-decomp/issues/10).
+- Chun-Li: CL2 [#15](https://github.com/trafgals/3s-decomp/issues/15), CL4 [#16](https://github.com/trafgals/3s-decomp/issues/16), CL5 [#17](https://github.com/trafgals/3s-decomp/issues/17), CL6 [#18](https://github.com/trafgals/3s-decomp/issues/18), CL7 [#11](https://github.com/trafgals/3s-decomp/issues/11).
+- Yun: YU1 [#19](https://github.com/trafgals/3s-decomp/issues/19), YU4 [#20](https://github.com/trafgals/3s-decomp/issues/20).
+- Makoto: MK3 [#12](https://github.com/trafgals/3s-decomp/issues/12), MK4 [#21](https://github.com/trafgals/3s-decomp/issues/21), MK5 [#22](https://github.com/trafgals/3s-decomp/issues/22), MK6 [#23](https://github.com/trafgals/3s-decomp/issues/23), MK7 [#24](https://github.com/trafgals/3s-decomp/issues/24), MK8 [#25](https://github.com/trafgals/3s-decomp/issues/25).
+- Dudley: DD3 [#26](https://github.com/trafgals/3s-decomp/issues/26), DD4 [#27](https://github.com/trafgals/3s-decomp/issues/27), DD5 [#28](https://github.com/trafgals/3s-decomp/issues/28), DD6 [#29](https://github.com/trafgals/3s-decomp/issues/29).
+- Urien: UR1 [#30](https://github.com/trafgals/3s-decomp/issues/30).
+- Yang: YA1 [#31](https://github.com/trafgals/3s-decomp/issues/31), YA2 [#32](https://github.com/trafgals/3s-decomp/issues/32), YA3 [#33](https://github.com/trafgals/3s-decomp/issues/33).
+- Ryu: RY1 [#34](https://github.com/trafgals/3s-decomp/issues/34), RY2 [#35](https://github.com/trafgals/3s-decomp/issues/35), RY5 [#36](https://github.com/trafgals/3s-decomp/issues/36).
+- Oro: OR1 [#37](https://github.com/trafgals/3s-decomp/issues/37), OR2 [#38](https://github.com/trafgals/3s-decomp/issues/38), OR3 [#39](https://github.com/trafgals/3s-decomp/issues/39), OR4 [#40](https://github.com/trafgals/3s-decomp/issues/40), OR6 [#41](https://github.com/trafgals/3s-decomp/issues/41).
+- Elena: EL2 [#42](https://github.com/trafgals/3s-decomp/issues/42), EL4 [#43](https://github.com/trafgals/3s-decomp/issues/43), EL5 [#13](https://github.com/trafgals/3s-decomp/issues/13).
+- Ibuki: IB3 [#44](https://github.com/trafgals/3s-decomp/issues/44), IB4 [#45](https://github.com/trafgals/3s-decomp/issues/45), IB5 [#46](https://github.com/trafgals/3s-decomp/issues/46).
+- Necro: NE1 [#47](https://github.com/trafgals/3s-decomp/issues/47), NE2 [#48](https://github.com/trafgals/3s-decomp/issues/48), NE3 [#49](https://github.com/trafgals/3s-decomp/issues/49).
+- Alex: AL1 [#50](https://github.com/trafgals/3s-decomp/issues/50), AL2 [#51](https://github.com/trafgals/3s-decomp/issues/51), AL3 [#52](https://github.com/trafgals/3s-decomp/issues/52), AL5 [#53](https://github.com/trafgals/3s-decomp/issues/53), AL8 [#54](https://github.com/trafgals/3s-decomp/issues/54), AL9 [#55](https://github.com/trafgals/3s-decomp/issues/55), AL10 [#56](https://github.com/trafgals/3s-decomp/issues/56).
+- Hugo: HU1 [#57](https://github.com/trafgals/3s-decomp/issues/57), HU4 [#58](https://github.com/trafgals/3s-decomp/issues/58), HU5 [#59](https://github.com/trafgals/3s-decomp/issues/59), HU6 [#60](https://github.com/trafgals/3s-decomp/issues/60).
+- Q: Q7 [#61](https://github.com/trafgals/3s-decomp/issues/61), Q8 [#62](https://github.com/trafgals/3s-decomp/issues/62), Q9 [#63](https://github.com/trafgals/3s-decomp/issues/63), Q10 [#64](https://github.com/trafgals/3s-decomp/issues/64), Q11 [#65](https://github.com/trafgals/3s-decomp/issues/65).
+- Remy: RM3 [#66](https://github.com/trafgals/3s-decomp/issues/66), RM5 [#67](https://github.com/trafgals/3s-decomp/issues/67), RM8 [#68](https://github.com/trafgals/3s-decomp/issues/68), RM9 [#69](https://github.com/trafgals/3s-decomp/issues/69), RM11 [#70](https://github.com/trafgals/3s-decomp/issues/70).
+- Twelve: TW3 [#71](https://github.com/trafgals/3s-decomp/issues/71), TW4 [#72](https://github.com/trafgals/3s-decomp/issues/72), TW10 [#73](https://github.com/trafgals/3s-decomp/issues/73), TW11 [#74](https://github.com/trafgals/3s-decomp/issues/74), TW12 [#75](https://github.com/trafgals/3s-decomp/issues/75).
+- Sean: SN2 [#76](https://github.com/trafgals/3s-decomp/issues/76), SN3 [#77](https://github.com/trafgals/3s-decomp/issues/77), SN4 [#78](https://github.com/trafgals/3s-decomp/issues/78), SN5 [#79](https://github.com/trafgals/3s-decomp/issues/79), SN7 [#80](https://github.com/trafgals/3s-decomp/issues/80), SN8 [#81](https://github.com/trafgals/3s-decomp/issues/81), SN9 [#82](https://github.com/trafgals/3s-decomp/issues/82), SN10 [#83](https://github.com/trafgals/3s-decomp/issues/83).
