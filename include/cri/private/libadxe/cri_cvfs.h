@@ -7,7 +7,15 @@
 
 void* cvFsOpen(const Char8* fname, void* arg1, Sint32 arg2);
 void cvFsClose(CVFSHandle*);
+// The implementation of the seek returns the new position. The retail build
+// declares it without one, which does not matter there, because the call is a
+// direct one. The port build resolves the call through the function table of
+// WebAssembly, where the signatures have to match.
+#if defined(TARGET_PS2)
 void cvFsSeek(CVFSHandle*, Sint32, Sint32);
+#else
+Sint32 cvFsSeek(CVFSHandle*, Sint32, Sint32);
+#endif
 Sint32 cvFsTell(CVFSHandle*);
 Sint32 cvFsGetStat(CVFSHandle*);
 Sint32 cvFsReqRd(CVFSHandle*, Sint32, void*);

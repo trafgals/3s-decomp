@@ -6,6 +6,7 @@
 
 WORK_CP wcp[2];
 T_PL_LVR t_pl_lvr[2];
+// Command state, [player][command slot]; CMD_MAIN.c:cmd_move() steps every slot each frame.
 WAZA_WORK waza_work[2][56];
 
 // sbss
@@ -40,6 +41,12 @@ const s16 pc_cmd_01[29] = { 8, 4, 2, 0, 0, 0,  0, 128, 0,      0,  0, 0, 1,     
 
 const s16 pc_cmd_02[21] = { 8, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 0, 25, 1, 0, 2, 25, 8, 0, 1, 28 };
 
+// A command is a 12-word header and then 4-word steps { type, timer, count, lever }, ended by a step of type 28
+// (see CMD_MAIN.c:check_init()). Lever bits: 1 up, 2 down, 4 forward, 8 back, relative to the character
+// (CMD_MAIN.c:pl_lvr_set() swaps 4 and 8 by facing); 0x8000 asks for that exact direction.
+// The pc_cmd_* commands are shared by every character. Slots 3-6 are the parries: one step of type 11
+// (CMD_MAIN.c:check_10(), a tap from neutral) to forward (3, 5) or down (4, 6). 5 and 6 only count in the
+// air. HITCHECK.c:check_blocking_flag() reads the ground ones, waza_flag[3] and [4].
 const s16 pc_cmd_03[17] = { 11, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 0, 11, 0, 0, 4, 28 };
 
 const s16 pc_cmd_04[17] = { 11, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 0, 11, 0, 0, 2, 28 };
@@ -562,8 +569,19 @@ const s16 pE_CMD_22[37] = { 12, 0,  0, 17,     17, 17, 17, 5,      4, 5,  6, 23,
 const s16 pE_cmd_24[33] = { 12, 0, 0, 24, 24, 24, 24, 259, 18, 18, 18, 18, 6,  0, 0,   16, 6,
                             10, 0, 0, 6,  10, 0,  16, 22,  16, 0,  4,  6,  10, 0, 256, 28 };
 
+// Gouki's Kongou Kokuretsu Zan (the KKZ): down, neutral, down, neutral, down (steps of type 22 and 10, the
+// lever 0x8002 is exactly down), then any two punches: the four strengths all use button index 19 of
+// PLS03.c:cmdshot_conv_tbl[], the one of the EX specials (bit 0x80, two punches or more). Measured:
+// D,D,D+PP gives the KKZ in the retail game, D,D+PP a normal.
+#if defined(UPPER_3S)
+// Third Strike Upper (AK3): "KKZ (hidden super) motion changed from D,D,D+PPP to D,D+PP." The punches are
+// already PP in this version; one down and its neutral are removed.
+const s16 pE_cmd_25[25] = { 12, 0, 0, 26, 26, 26, 26,     5,  19, 19, 19, 19, 22, 1, 1,      -32766, 10,
+                            6,  0, 0, 10, 6,  0,  -32766, 28 };
+#else
 const s16 pE_cmd_25[33] = { 12, 0, 0, 26, 26, 26, 26,     5,  19, 19, 19, 19, 22, 1, 1,      -32766, 10,
                             6,  0, 0, 10, 6,  0,  -32766, 10, 6,  0,  0,  10, 6,  0, -32766, 28 };
+#endif
 
 const s16 pE_cmd_28[25] = { 12, 1, 0,      23, 23, 23, 23,     5, 19, 19, 23,     23, 27,
                             1,  0, -32764, 1,  5,  0,  -32766, 1, 10, 0,  -32762, 28 };
@@ -1110,6 +1128,9 @@ const_s16_arr p14_CMD[56] = { pc_cmd_00,  pc_cmd_01,  pc_cmd_02,  pc_cmd_03,  pc
 
 // sdata
 
+// Command tables in character index order. The names skip F: p0-p9 and pA-pE are characters 0-14, and
+// p10-p14 are 15-19 (Chun-Li p10_cmd, Makoto p11_cmd, Q p12_cmd, Twelve p13_cmd, Remy p14_cmd). pl_CMD
+// replaces pl_cmd when cmd_sel[] is set (CMD_MAIN.c:cmd_move()). dm_cmd_xx marks an unused slot.
 void* pl_cmd[20] = { p0_cmd, p1_cmd, p2_cmd, p3_cmd, p4_cmd, p5_cmd,  p6_cmd,  p7_cmd,  p8_cmd,  p9_cmd,
                      pA_cmd, pB_cmd, pC_cmd, pD_cmd, pE_cmd, p10_cmd, p11_cmd, p12_cmd, p13_cmd, p14_cmd };
 

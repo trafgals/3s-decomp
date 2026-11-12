@@ -1,3 +1,5 @@
+// Shared by every character: superflash stop (sa_stop_check()) and tech-roll (ukemi) checks.
+
 #include "sf33rd/Source/Game/PLS01.h"
 #include "common.h"
 #include "sf33rd/Source/Game/CALDIR.h"

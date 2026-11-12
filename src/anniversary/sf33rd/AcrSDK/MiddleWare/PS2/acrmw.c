@@ -4,6 +4,14 @@
 #include "sf33rd/AcrSDK/MiddleWare/PS2/CapSndEng/cse.h"
 #include "sf33rd/AcrSDK/ps2/foundaps2.h"
 
+// The SDL application is the port's replacement for the middleware of the
+// retail build. The retail build has to stay byte-identical, so the header
+// is not part of it: an include that is not guarded would add the
+// declarations of the port to the preprocessed source of the retail build.
+#if !defined(TARGET_PS2)
+#include "port/sdl/sdl_app.h"
+#endif
+
 #include <cri_mw.h>
 #include <eeregs.h>
 #include <libgraph.h>
@@ -25,6 +33,7 @@ void flmwFlip(u32 /* unused */) {
     ADXM_ExecMain();
     cseExecServer();
 
+#if defined(TARGET_PS2)
     if (flPs2State.Irq_count <= flPs2State.FrameCount) {
         flPs2State.Oddeven = (*GS_CSR >> 13) & 1;
         flmwFlipSub();
@@ -41,4 +50,7 @@ void flmwFlip(u32 /* unused */) {
             // Wait
         }
     }
+#else
+    SDLApp_EndFrame();
+#endif
 }

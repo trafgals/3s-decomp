@@ -3118,6 +3118,8 @@ void (*const Passive_jmp_tbl[21])() = { GILL_vs, KEN_vs, KEN_vs, KEN_vs, KEN_vs,
                                         KEN_vs,  KEN_vs, KEN_vs, KEN_vs, KEN_vs, KEN_vs, KEN_vs,
                                         KEN_vs,  KEN_vs, KEN_vs, KEN_vs, KEN_vs, KEN_vs, KEN_vs };
 
+// The eight Passive_A..D(S)_tbl tables are in character index order (Gill 0 ... Remy 19). Yang (10) has no entry of his
+// own and reuses Yun's (VS_YUN_*). Together with Eff99.c:Letter_Data_99 this pins down the character order.
 s32 (*const Passive_AS_tbl[20])(PLW* wk) = { VS_GILL_AS,    VS_ALEX_AS,   VS_RYU_AS,   VS_YUN_AS,   VS_DUDLEY_AS,
                                              VS_NECRO_AS,   VS_HUGO_AS,   VS_IBUKI_AS, VS_ELENA_AS, VS_ORO_AS,
                                              VS_YUN_AS,     VS_KEN_AS,    VS_SEAN_AS,  VS_URIEN_AS, VS_GOUKI_AS,

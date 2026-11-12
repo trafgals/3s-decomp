@@ -1,3 +1,5 @@
+// Shared by every character: movement data, super meter gain (add_sp_arts_gauge_*()) and health setup.
+
 #include "sf33rd/Source/Game/PLS02.h"
 #include "bin2obj/gauge.h"
 #include "common.h"
@@ -14,6 +16,10 @@
 #include "sf33rd/Source/Game/debug/Debug.h"
 #include "sf33rd/Source/Game/workuser.h"
 #include "structs.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s.h"
+#include "sf33rd/Source/Game/upper3s_sys.h"
+#endif
 
 void read_adrs_store_mvxy(WORK* wk, s16* adrs);
 void remake_mvxy_PoGR(WORK* wk);
@@ -779,6 +785,8 @@ s16 get_kind_of_trunk_dm(s16 dir, s8 drl) {
     return dir16_trdm[dir];
 }
 
+// pno is the character index. The health comes from Com_Data.c:Com_Vital_Unit_Data, which is the health
+// table of every player despite its name.
 void setup_vitality(WORK* wk, s16 pno) {
     s16 ix;
 
@@ -789,6 +797,21 @@ void setup_vitality(WORK* wk, s16 pno) {
     }
 
     wk->original_vitality = Com_Vital_Unit_Data[pno][save_w[Present_Mode].Damage_Level][ix];
+#if defined(UPPER_3S)
+    {
+        // Third Strike Upper: the health of Ibuki and of Twelve.
+        s16 scale;
+        s16 source = upper3s_sys_health_source(pno, &scale);
+
+        if (source != pno) {
+            wk->original_vitality = Com_Vital_Unit_Data[source][save_w[Present_Mode].Damage_Level][ix];
+        }
+
+        if (scale != 1000) {
+            wk->original_vitality = (wk->original_vitality * scale) / 1000;
+        }
+    }
+#endif
     wk->original_vitality += (s16)base_vital_omake[omop_vital_init[wk->id]];
     wk->dmcal_m = 32;
     wk->dmcal_d = (wk->original_vitality << 5) / Max_vitality;
@@ -842,6 +865,9 @@ void set_hit_stop_hit_quake(WORK* wk) {
     }
 }
 
+// Meter gain when an attack starts, whether or not it connects: this is the whiff gain. Column 0 of
+// bin2obj/gauge.c:_add_arts_gauge. Called from CHARSET.c:set_new_attnum() as each frame with attack data
+// loads. For an effect (work_id != 1, e.g. a projectile) the gain goes to its owner, wk->cp.
 void add_sp_arts_gauge_init(PLW* wk) {
 #if defined(TARGET_PS2)
     void add_super_arts_gauge(SA_WORK * wk, s32 ix, s32 asag, u16 mf);
@@ -859,10 +885,19 @@ void add_sp_arts_gauge_init(PLW* wk) {
         }
     } else if (!(wk->spmv_ng_flag2 & 0x20000000)) {
         asag = _add_arts_gauge[wk->player_number][wk->wu.add_arts_point][0];
+#if defined(UPPER_3S)
+        // Third Strike Upper: the metergain of a normal is halved for every
+        // consecutive whiff. The metergain of a special is not changed.
+        if (wk->wu.now_koc == U3S_KOC_NORMAL) {
+            asag = upper3s_sys_whiff_start(&wk->wu, asag);
+        }
+#endif
         add_super_arts_gauge(wk->sa, wk->wu.id, asag, wk->metamorphose);
     }
 }
 
+// Meter gain for the attacker when the attack is blocked: column 1 of _add_arts_gauge. Called from
+// HITCHECK.c:set_guard_status(). Not the whiff gain, which is add_sp_arts_gauge_init().
 void add_sp_arts_gauge_guard(PLW* wk) {
 #if defined(TARGET_PS2)
     void add_super_arts_gauge(SA_WORK * wk, s32 ix, s32 asag, u32 mf);
@@ -884,6 +919,9 @@ void add_sp_arts_gauge_guard(PLW* wk) {
     }
 }
 
+// Meter gain on a hit: column 2 of _add_arts_gauge, row = the meter row of the attack that hit (dm_arts_point),
+// table = the attacker's character. wk is the player who was hit and gets a third of it; the attacker
+// (wk->wu.target_adrs) gets the full value, adjusted for CPU difficulty and by cal_sa_gauge_waribiki().
 void add_sp_arts_gauge_hit_dm(PLW* wk) {
 #if defined(TARGET_PS2)
     void add_super_arts_gauge(SA_WORK * wk, s32 ix, s32 asag, u32 mf);
@@ -945,6 +983,8 @@ s16 cal_sa_gauge_waribiki(PLW* wk, s16 asag) {
     return asag;
 }
 
+// Meter gain on a parry: column 3 of _add_arts_gauge (attacker's character, the parried attack's meter row),
+// paid to wk, the player who parried.
 void add_sp_arts_gauge_paring(PLW* wk) {
 #if defined(TARGET_PS2)
     void add_super_arts_gauge(SA_WORK * wk, s32 ix, s32 asag, u16 mf);

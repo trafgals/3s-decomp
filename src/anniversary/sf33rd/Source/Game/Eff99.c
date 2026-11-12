@@ -10,6 +10,8 @@ void Setup_Letter_99(WORK_Other_CONN* ewk, s16 letter_index, s16 disp_index);
 
 const s16 Pos_Data_99[5][3] = { { -144, 128, 23 }, { 48, 128, 23 }, { 8, 54, 23 }, { 0, 42, 23 }, { 0, 30, 23 } };
 
+// Rows [2] (home country), [3] (stage name) and [4] ("<character> STAGE") are in character index order:
+// Gill 0, Alex 1, ... Yang 10, Ken 11, ... Akuma 14, Chun-Li 15, Makoto 16, Q 17, Twelve 18, Remy 19.
 const s8* Letter_Data_99[5][21] = {
     { ";;;;;;;#", ";;;;;;##", ";;;;;###", ";;;;####", ";;;#####", ";;######", ";#######", "########" },
     { "#;;;;;;;", "##;;;;;;", "###;;;;;", "####;;;;", "#####;;;", "######;;", "#######;", "########" },

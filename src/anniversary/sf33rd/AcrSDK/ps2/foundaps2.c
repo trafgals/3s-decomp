@@ -15,6 +15,18 @@
 #include "sf33rd/AcrSDK/ps2/ps2PAD.h"
 #include "structs.h"
 
+#include "port/sdk_threads.h"
+// The trace of the browser build is a statement, and the semicolon belongs
+// to the macro: the retail build has to stay byte-identical, and a macro
+// that expands to nothing would still leave the semicolon of the call in
+// the preprocessed source of the retail build.
+#if defined(TARGET_WEB)
+#include "port/web/web_trace.h"
+#define FL_TRACE(x) web_trace(x);
+#else
+#define FL_TRACE(x)
+#endif
+
 #include <eekernel.h>
 #include <libcdvd.h>
 #include <libdma.h>
@@ -27,7 +39,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(TARGET_PS2)
 #include "mw_stdarg.h"
+#else
+#include <stdarg.h>
+#endif
 
 // bss
 FLPS2State flPs2State;
@@ -133,30 +149,40 @@ static void flPS2DrawPreparation();
 void flPS2VSyncCallback();
 
 s32 flInitialize(s32 /* unused */, s32 /* unused */) {
+    FL_TRACE("flInitialize: start")
     if (system_work_init() == 0) {
         return 0;
     }
+    FL_TRACE("flInitialize: after system_work_init")
 
     if (system_hard_init() == 0) {
         return 0;
     }
+    FL_TRACE("flInitialize: after system_hard_init")
 
     flPS2SystemTmpBuffInit();
     flPs2State.FrameCount = 0;
     flPs2State.FrameCountNext = 0;
     flPs2State.Irq_count = 0;
     flPS2VramFullClear();
+    FL_TRACE("flInitialize: after VramFullClear")
     flPS2InitRenderBuff(4, 2, 1, 0, 1);
+    FL_TRACE("flInitialize: after InitRenderBuff")
     flPS2SwapDBuff(0, 1);
+    FL_TRACE("flInitialize: after SwapDBuff")
     flPADInitialize();
+    FL_TRACE("flInitialize: after PADInitialize")
     flPS2DebugInit();
+    FL_TRACE("flInitialize: after DebugInit")
 
+#if defined(TARGET_PS2)
     // This loop waits until we're on an even frame
     while (1) {
         if ((flPs2State.Oddeven = sceGsSyncV(0)) == 0) {
             break;
         }
     }
+#endif
 
     DPUT_T1_MODE(0x80);
     DPUT_T1_COUNT(0);
@@ -197,6 +223,11 @@ s32 system_work_init() {
 }
 
 s32 system_hard_init() {
+#if !defined(TARGET_PS2)
+    // This is PS2-specific hardware initialization code, which means we can omit it for non-PS2 systems
+    return 1;
+#endif
+
     s32 i;
 
     sceSifInitRpc(0);
@@ -285,6 +316,11 @@ s32 flFlip(u32 flag) {
 }
 
 void flPS2VramFullClear() {
+#if !defined(TARGET_PS2)
+    // We don't need to clear VRAM on non-PS2 systems
+    return;
+#endif
+
     u32 handle;
     u8* lpBuff;
     u32 i;
@@ -779,6 +815,10 @@ s32 flLogOut(s8* format, ...) {
 
     flFileAppend("../acrout.txt", str, strlen(str));
     va_end(args);
+
+#if !defined(TARGET_PS2)
+    fatal_error(str);
+#endif
 
     return 1;
 }

@@ -26,6 +26,23 @@ extern void exit OF((int));
 // "incompatible version",/* Z_VERSION_ERROR (-6) */
 // ""};
 
+#if !defined(TARGET_PS2)
+// The retail linker does not garbage collect this table, so the PS2 build
+// leaves it out entirely. Host builds keep it so that zError() links.
+const char* z_errmsg[10] = {
+    "need dictionary",     /* Z_NEED_DICT       2  */
+    "stream end",          /* Z_STREAM_END      1  */
+    "",                    /* Z_OK              0  */
+    "file error",          /* Z_ERRNO         (-1) */
+    "stream error",        /* Z_STREAM_ERROR  (-2) */
+    "data error",          /* Z_DATA_ERROR    (-3) */
+    "insufficient memory", /* Z_MEM_ERROR     (-4) */
+    "buffer error",        /* Z_BUF_ERROR     (-5) */
+    "incompatible version",/* Z_VERSION_ERROR (-6) */
+    ""
+};
+#endif
+
 // const char * ZEXPORT zlibVersion()
 // {
 //     return ZLIB_VERSION;

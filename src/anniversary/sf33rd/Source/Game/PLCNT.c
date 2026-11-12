@@ -38,6 +38,12 @@
 #include "sf33rd/Source/Game/texgroup.h"
 #include "sf33rd/Source/Game/win_pl.h"
 #include "sf33rd/Source/Game/workuser.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/cmd_data.h"
+#include "sf33rd/Source/Game/upper3s.h"
+#include "sf33rd/Source/Game/upper3s_sm4.h"
+#include "sf33rd/Source/Game/upper3s_sys.h"
+#endif
 
 void pli_0000();
 void pli_1000();
@@ -113,6 +119,11 @@ void (*const settle_process[5])() = {
     settle_type_00000, settle_type_10000, settle_type_20000, settle_type_30000, settle_type_40000
 };
 
+// Character index -> charset id. The character index (Gill 0, Alex 1, Ryu 2, Yun 3, Dudley 4, Necro 5,
+// Hugo 6, Ibuki 7, Elena 8, Oro 9, Yang 10, Ken 11, Sean 12, Urien 13, Akuma 14, Chun-Li 15, Makoto 16,
+// Q 17, Twelve 18, Remy 19) is My_char[] / PLW.player_number and keys every [20] table of the game. The
+// charset id keys the character data loaded from disc (char_init_data[], filled by
+// texgroup.c:q_ldreq_texture_group()).
 const s8 plid_data[20] = { 6, 3, 5, 1, 2, 9, 7, 4, 10, 8, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22 };
 
 const s8 weight_lv_table[20] = { 2, 2, 1, 0, 1, 2, 3, 0, 1, 0, 0, 1, 1, 2, 1, 1, 1, 3, 2, 1 };
@@ -125,6 +136,9 @@ const s16 kage_base[20][2] = { { 0, 21 },  { 0, 30 },  { 0, 21 },  { -4, 16 }, {
                                { -4, 20 }, { 0, 25 },  { -3, 22 }, { -4, 16 }, { 0, 21 }, { 0, 21 }, { 0, 21 },
                                { 0, 21 },  { -8, 21 }, { 0, 23 },  { 0, 24 },  { 6, 25 }, { -6, 21 } };
 
+// Super art data: [character index][slot: 0 = SA I, 1 = SA II, 2 = SA III]. In each entry the 9th value is
+// gauge_len (bar length; 128 is the longest, e.g. Ryu's Shin-Shoryuken) and the 10th is store_max (the
+// number of stocks). super_arts_DATA below replaces this table when cmd_sel[ix] or no_sa[ix] is set.
 const SA_DATA super_arts_data[20][4] = { { { 20, 24, 25, 0, 0, 0, 0, 3, 128, 1, 65536 },
                                            { 21, 24, 25, 0, 0, 0, 0, 3, 128, 1, 65536 },
                                            { 22, 24, 25, 0, 0, 0, 0, 3, 128, 1, 65536 },
@@ -206,6 +220,8 @@ const SA_DATA super_arts_data[20][4] = { { { 20, 24, 25, 0, 0, 0, 0, 3, 128, 1, 
                                            { 21, 0, 0, 0, 0, 0, 0, 0, 80, 1, 65536 },
                                            { 0, 0, 0, 0, 0, 0, 0, 0, 64, 1, 65536 } } };
 
+// Same layout as super_arts_data; used instead of it when cmd_sel[ix] or no_sa[ix] is set. cmd_sel also
+// switches the command tables to pl_CMD (CMD_MAIN.c:cmd_move()).
 const SA_DATA super_arts_DATA[20][4] = { { { 20, 24, 25, 0, 0, 0, 0, 3, 120, 2, 65536 },
                                            { 21, 24, 25, 0, 0, 0, 0, 3, 120, 2, 65536 },
                                            { 22, 24, 25, 0, 0, 0, 0, 3, 120, 2, 65536 },
@@ -287,8 +303,10 @@ const SA_DATA super_arts_DATA[20][4] = { { { 20, 24, 25, 0, 0, 0, 0, 3, 120, 2, 
                                            { 21, 0, 0, 0, 0, 0, 0, 0, 120, 2, 65536 },
                                            { 0, 0, 0, 0, 0, 0, 0, 0, 64, 1, 65536 } } };
 
+// Stun bar size by character index: 56 short (Akuma 14, Remy 19), 64 regular, 72 long.
 const s16 pl_piyo_tbl[20] = { 72, 72, 64, 64, 72, 64, 72, 64, 64, 72, 64, 64, 64, 64, 56, 64, 64, 72, 64, 56 };
 
+// Stun recovery rate by character index (copied to piyori_type[].recover).
 const s32 pl_nr_piyo_tbl[20] = { 3276, 2849, 2978, 2730, 2978, 2849, 3120, 2730, 2978, 2730,
                                  2730, 2978, 2849, 3120, 2849, 2978, 3276, 2978, 2849, 3120 };
 
@@ -366,6 +384,14 @@ void Player_control() {
     players_timer &= 0x7FFF;
     set_scrrrl();
     player_main_process[pcon_rno[0]]();
+#if defined(UPPER_3S)
+    // 3s' SM4: the partition timer of a charge is reset to its maximum once,
+    // when the charged direction reaches one third of its charge, so the
+    // charge can always be partitioned in the full window.  The command
+    // system has already run above, so the state of the charges is current.
+    upper3s_sm4_charge_partition(plw[0].wu.id, waza_work[plw[0].wu.id], UPPER3S_SM4_WAZA_COUNT);
+    upper3s_sm4_charge_partition(plw[1].wu.id, waza_work[plw[1].wu.id], UPPER3S_SM4_WAZA_COUNT);
+#endif
     check_body_touch();
     check_damage_hosei();
     set_quake(&plw[0]);
@@ -1273,6 +1299,11 @@ void set_base_data(PLW* wk, s16 ix) {
     set_char_base_data(&wk->wu);
     wk->wu.target_adrs = (u32*)&plw[(ix + 1) & 1];
     wk->player_number = My_char[ix];
+#if defined(UPPER_3S)
+    // The 3s' overrides are keyed by the character index, so they can only
+    // be applied once player_number is known.
+    upper3s_apply_character(wk);
+#endif
     wk->wu.hit_adrs = wk->wu.target_adrs;
     wk->wu.dmg_adrs = wk->wu.target_adrs;
     cmd_init(wk);
@@ -1311,6 +1342,12 @@ void set_base_data_tiny(PLW* wk) {
     wk->wu.charset_id = plid_data[My_char[wk->wu.id]];
     wk->player_number = My_char[wk->wu.id];
     set_char_base_data(&wk->wu);
+#if defined(UPPER_3S)
+    // The attack table is shared between the two players of a character, so
+    // this only has to run once per round - but it has to run after the
+    // character data has been read.
+    upper3s_apply_character(wk);
+#endif
 
     if (wk->wu.id) {
         wk->wu.my_col_code |= 0x10;
@@ -1369,7 +1406,14 @@ void set_kizetsu_status(s16 ix) {
     piyori_type[ix].now.timer = 0;
     piyori_type[ix].store = 0;
     piyori_type[ix].recover = pl_nr_piyo_tbl[plnum];
+#if defined(UPPER_3S)
+    // Third Strike Upper: the stun bar of Akuma and of Remy is raised to
+    // the regular size of the stun bar.
+    piyori_type[ix].genkai =
+        upper3s_sys_stun_genkai(plnum, pl_piyo_tbl[plnum]) + stun_gauge_len_omake[omop_stun_gauge_len[ix]];
+#else
     piyori_type[ix].genkai = pl_piyo_tbl[plnum] + stun_gauge_len_omake[omop_stun_gauge_len[ix]];
+#endif
 
     if (piyori_type[ix].genkai < 56) {
         piyori_type[ix].genkai = 56;
@@ -1401,6 +1445,9 @@ void set_super_arts_status(s16 ix) {
     } else {
         saptr = &super_arts_data[My_char[ix]][Super_Arts[ix]];
     }
+#if defined(UPPER_3S)
+    saptr = upper3s_super_art_data(My_char[ix], Super_Arts[ix], saptr);
+#endif
 
     super_arts[ix].kind_of_arts = Super_Arts[ix];
     super_arts[ix].nmsa_g_ix = saptr->nmsa_g_ix;
@@ -1464,6 +1511,9 @@ void set_super_arts_status_dc(s16 ix) {
     } else {
         saptr = &super_arts_data[My_char[ix]][Super_Arts[ix]];
     }
+#if defined(UPPER_3S)
+    saptr = upper3s_super_art_data(My_char[ix], Super_Arts[ix], saptr);
+#endif
 
     super_arts[ix].kind_of_arts = Super_Arts[ix];
     super_arts[ix].nmsa_g_ix = saptr->nmsa_g_ix;

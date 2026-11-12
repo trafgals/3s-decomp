@@ -1,4 +1,7 @@
 #include "sf33rd/Source/Game/SYS_sub.h"
+#if defined(TARGET_HEADLESS)
+#include "port/headless/headless.h"
+#endif
 #include "common.h"
 #include "sf33rd/AcrSDK/common/mlPAD.h"
 #include "sf33rd/AcrSDK/ps2/flps2debug.h"
@@ -86,6 +89,14 @@ s32 Switch_Screen_Revival(u8 Wipe_Type) {
 u16 Convert_User_Setting(s16 PL_id) {
     u16 sw;
     u16 answer;
+
+#if defined(TARGET_HEADLESS)
+    // Headless test runs supply the players' input here, already in the game's bits
+    // (port/headless/harness.c), so the button configuration does not matter.
+    if (harness_input(PL_id, &answer)) {
+        return answer;
+    }
+#endif
 
     if (Debug_w[70] == 16) {
         if (PL_id == 0) {

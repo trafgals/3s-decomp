@@ -1,6 +1,12 @@
 #include "bin2obj/common.h"
 #include "types.h"
 
+// Super meter gain: [character index of the attacker][row][column]. The row is the attack's meter row
+// (add_arts_point, the high nibble of its piyo byte; see CHARSET.c). The columns are read by PLS02.c:
+//   0  the attack starts, whether or not it connects: the whiff gain (add_sp_arts_gauge_init())
+//   1  the attack is blocked (add_sp_arts_gauge_guard())
+//   2  the attack hits (add_sp_arts_gauge_hit_dm(); the defender also gets a third)
+//   3  the attack is parried; the parrying player gains (add_sp_arts_gauge_paring())
 DATA_SECTION u8 _add_arts_gauge[20][16][4] = { { { 0, 0, 0, 3 },
                                                  { 0, 1, 2, 3 },
                                                  { 0, 0, 0, 3 },
@@ -322,6 +328,8 @@ DATA_SECTION u8 _add_arts_gauge[20][16][4] = { { { 0, 0, 0, 3 },
                                                  { 2, 2, 13, 4 },
                                                  { 0, 1, 2, 4 } } };
 
+// Stun per hit: [character index of the attacker][stun index, the low nibble of the attack's piyo byte].
+// Read by HITCHECK.c:set_damage_and_piyo() and HITEFPL.c.
 DATA_SECTION u8 _add_piyo_gauge[20][16] = { { 0, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 25, 28, 30, 32 },
                                             { 0, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 24, 27, 29, 31 },
                                             { 0, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 28, 32, 36, 40, 50 },

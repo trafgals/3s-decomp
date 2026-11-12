@@ -1,3 +1,5 @@
+// Shared by every character: special and super command checks, universal overhead and taunt input.
+
 #include "sf33rd/Source/Game/PLS03.h"
 #include "bin2obj/asstbl.h"
 #include "common.h"
@@ -10,6 +12,11 @@
 #include "sf33rd/Source/Game/PulPul.h"
 #include "sf33rd/Source/Game/SysDir.h"
 #include "sf33rd/Source/Game/workuser.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/PLS01.h"
+#include "sf33rd/Source/Game/upper3s_ch_ibuki.h"
+#include "sf33rd/Source/Game/upper3s_input.h"
+#endif
 
 // Forward decls
 
@@ -18,6 +25,15 @@ extern const s16 cmdshot_conv_tbl[32];
 u16 decode_wst_data(PLW* wk, u16 cmd, s16 cmd_ex);
 
 void hissatsu_setup_union(PLW* wk, s16 rno) {
+#if defined(UPPER_3S)
+    // Third Strike Upper (IB3): a move cancelled out of Ibuki's Tsuiji Goe in the air faces the opponent
+    // (upper3s_ch_ibuki.h). The move being left is still the current one here.
+    if (upper3s_ibuki_cancel_faces_opponent(wk->player_number, wk->wu.now_koc, wk->wu.char_index,
+                                            wk->wu.xyz[1].disp.pos)) {
+        set_rl_waza(wk);
+        wk->wu.rl_flag = wk->wu.rl_waza;
+    }
+#endif
     wk->wu.routine_no[1] = 4;
     wk->wu.routine_no[2] = rno;
     wk->wu.routine_no[3] = 0;
@@ -730,9 +746,17 @@ s32 check_leap_attack(PLW* wk) {
             return 0;
         }
 
+#if defined(UPPER_3S)
+        // Third Strike Upper: the universal overhead comes out while the stick
+        // is held away or towards (B3).
+        if (!upper3s_input_combo_direction_ok(wk->cp->sw_lvbt, U3S_INPUT_LEVER_ANY)) {
+            return 0;
+        }
+#else
         if (wk->cp->sw_lvbt & 0xF) {
             return 0;
         }
+#endif
     } else {
         if (wk->cp->waza_flag[14] == 0) {
             return 0;
@@ -897,6 +921,16 @@ s32 check_chouhatsu(PLW* wk) {
         return 0;
     }
 
+#if defined(UPPER_3S)
+    // Third Strike Upper: the personal action comes out while the stick is
+    // held away or towards (B3).  The retail game lets Hugo do his personal
+    // action while the stick is held up, and that stays the case.
+    if (!upper3s_input_combo_direction_ok(wk->cp->sw_lvbt,
+                                          (wk->player_number == 6) ? U3S_INPUT_LEVER_ANY_BUT_UP
+                                                                    : U3S_INPUT_LEVER_ANY)) {
+        return 0;
+    }
+#else
     if (wk->player_number == 6) {
         if (wk->cp->sw_lvbt & 0xE) {
             return 0;
@@ -904,6 +938,7 @@ s32 check_chouhatsu(PLW* wk) {
     } else if (wk->cp->sw_lvbt & 0xF) {
         return 0;
     }
+#endif
 
     if (wk->cp->ca36 == 0) {
         return 0;

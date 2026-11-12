@@ -1,0 +1,200 @@
+/*
+ * Functional tests for the Third Strike Upper hitstun items.
+ *
+ * The design document asks for a number of normals of five characters to
+ * have more hitstun, so that the hit of the move is not negative on hit.
+ *
+ * The hitstun of a move is the hold of the defender: the field `hs_you` of
+ * the attack data (`UNK_7.hs_you`).  `HITCHECK.c:dm_status_copy()` puts the
+ * value into `dm_stop`, `PLS02.c:set_hit_stop_hit_quake()` moves it into
+ * `hit_stop`, and `PLMAIN.c:check_hit_stop()` holds the defender for it, so
+ * the more frames it holds, the more the attacker is punished for the hit.
+ *
+ * The values are not guessed: `tools/upper3s/hit_advantage.py` computes the
+ * advantage of the hit of every normal of every character out of the data of
+ * the disc, and the values below are the ones that make the advantage of the
+ * hit zero.  The model reproduces the number of the design document for the
+ * standing Roundhouse of q (-10 on hit).
+ *
+ * The per character move data is loaded from the disc image at runtime, so
+ * the only way to test the override layer is to build a synthetic character
+ * and check that the framework rewrites exactly the numbers it is supposed to
+ * rewrite - and nothing else.
+ *
+ * Build and run with `make test` from the repository root.
+ */
+
+#include <stdio.h>
+#include <string.h>
+
+#include "common.h"
+#include "sf33rd/Source/Game/upper3s.h"
+
+static int failures;
+static int checks;
+
+static void check(int condition, const char* what) {
+    checks++;
+
+    if (!condition) {
+        failures++;
+        printf("  FAIL  %s\n", what);
+    } else {
+        printf("  ok    %s\n", what);
+    }
+}
+
+/* Every move of the synthetic character has a chain of its own, so that the
+ * framework can tell the moves apart. The chain of move `i` has the shape of a
+ * real one (see test_upper3s.c): the size of a block two words in front of it,
+ * a startup frame without attack data, the attacking frame, the end marker.
+ * Move `i` attacks with entry `i + 1` of the attack table: entry 0 is "no
+ * attack" for the engine (CHARSET.c), and the index is encoded the way the
+ * engine reads it (shifted left by 6 into the high half of the third word). */
+#define MOVE_COUNT 70
+#define BLOCK_WORDS 4
+#define MOVE_WORDS 16
+#define BLOCK_POS 72
+#define ATT_COUNT (MOVE_COUNT + 1)
+
+static u32 char_table[U3S_KOC_COUNT][BLOCK_POS + MOVE_COUNT * MOVE_WORDS];
+static UNK_7 att_ix_table[ATT_COUNT];
+
+/* The hitstun of the retail game, so that the test can tell a rewritten
+ * value from one that was left alone. */
+static s8 retail_hs_you[ATT_COUNT];
+
+static void setup_character(PLW* wk, s16 char_id) {
+    int i;
+
+    memset(wk, 0, sizeof(PLW));
+    memset(char_table, 0, sizeof(char_table));
+    memset(att_ix_table, 0, sizeof(att_ix_table));
+
+    for (i = 0; i < ATT_COUNT; i++) {
+        att_ix_table[i].pow = (u8)(i + 1);
+        att_ix_table[i].impact = (u8)(10 + i);
+        att_ix_table[i].piyo = (u8)i;
+        att_ix_table[i].hs_me = (s8)(i + 1);
+        att_ix_table[i].hs_you = (s8)(-(i + 1));
+        retail_hs_you[i] = att_ix_table[i].hs_you;
+    }
+
+    for (i = 0; i < MOVE_COUNT; i++) {
+        u32 base = BLOCK_POS + i * MOVE_WORDS + 2;
+        int k;
+
+        for (k = 0; k < 2; k++) {
+            u32* slot = char_table[k == 0 ? U3S_KOC_NORMAL : U3S_KOC_ATTACK];
+
+            slot[i] = base * 4;
+            slot[base - 2] = BLOCK_WORDS;
+            slot[base + 0 * BLOCK_WORDS] = 3 << 8; /* startup */
+            slot[base + 1 * BLOCK_WORDS] = 2 << 8; /* active */
+            slot[base + 1 * BLOCK_WORDS + 2] = (u32)((i + 1) << 22);
+            slot[base + 2 * BLOCK_WORDS] = 250 << 8; /* the end marker (U3S_CHAIN_WAIT_HOLD) */
+        }
+    }
+
+    for (i = 0; i < U3S_KOC_COUNT; i++) {
+        wk->wu.char_table[i] = char_table[i];
+    }
+
+    wk->wu.att_ix_table = att_ix_table;
+    wk->player_number = char_id;
+    wk->wu.now_koc = U3S_KOC_NORMAL;
+}
+
+/* Applies the overrides of a character and returns the hitstun that the
+ * framework wrote into the attack data of the move. */
+static s16 applied_hs_you(s16 char_id, s16 koc, s16 index) {
+    PLW wk;
+
+    setup_character(&wk, char_id);
+    wk.wu.now_koc = koc;
+    wk.wu.char_index = index;
+    upper3s_apply_character(&wk);
+
+    return (s16)att_ix_table[index + 1].hs_you;
+}
+
+/* The overrides of one character that the design document asks for. */
+typedef struct {
+    s16 char_id;
+    s16 koc;
+    s16 index;
+    s16 hs_you;
+    const char* what;
+} HitstunItem;
+
+static const HitstunItem items[] = {
+    /* Mirrors the tables of upper3s/plXX.c; the values are measured in the real engine and
+     * checked there by tests/match/test_hitstun.py. */
+    { U3S_RYU, U3S_KOC_NORMAL, 13, -13, "Ryu: far s.MK holds the defender 13 frames" },
+    { U3S_RYU, U3S_KOC_NORMAL, 15, -14, "Ryu: s.HK holds the defender 14 frames" },
+    { U3S_RYU, U3S_KOC_NORMAL, 6, -13, "Ryu: close s.HP holds the defender 13 frames" },
+    { U3S_RYU, U3S_KOC_NORMAL, 24, -17, "Ryu: c.HP holds the defender 17 frames" },
+    { U3S_RYU, U3S_KOC_NORMAL, 30, -11, "Ryu: c.MK holds the defender 11 frames" },
+    { U3S_HUGO, U3S_KOC_NORMAL, 18, -11, "Hugo: 2LP - crouching Jab holds the defender 11 frames" },
+    { U3S_HUGO, U3S_KOC_NORMAL, 27, -13, "Hugo: 2LK - crouching Short holds the defender 13 frames" },
+    { U3S_SEAN, U3S_KOC_NORMAL, 6, -13, "Sean: close s.HP holds the defender 13 frames" },
+    { U3S_SEAN, U3S_KOC_NORMAL, 7, -6, "Sean: far s.HP holds the defender 6 frames" },
+    { U3S_SEAN, U3S_KOC_NORMAL, 24, -15, "Sean: c.HP holds the defender 15 frames" },
+    { U3S_SEAN, U3S_KOC_NORMAL, 12, -13, "Sean: s.MK holds the defender 13 frames" },
+    { U3S_SEAN, U3S_KOC_NORMAL, 16, -18, "Sean: far s.HK holds the defender 18 frames" },
+    { U3S_SEAN, U3S_KOC_NORMAL, 30, -12, "Sean: c.MK holds the defender 12 frames" },
+    { U3S_SEAN, U3S_KOC_NORMAL, 8, -14, "Sean: 6HP holds the defender 14 frames" },
+    { U3S_Q, U3S_KOC_NORMAL, 27, 9, "Q: c.LK holds the defender 9 frames" },
+    { U3S_Q, U3S_KOC_NORMAL, 30, -11, "Q: c.MK holds the defender 11 frames" },
+    { U3S_Q, U3S_KOC_NORMAL, 15, -27, "Q: s.HK, close and far share the entry holds the defender 27 frames" },
+    { U3S_TWELVE, U3S_KOC_NORMAL, 3, -10, "Twelve: s.MP holds the defender 10 frames" },
+    { U3S_TWELVE, U3S_KOC_NORMAL, 4, -10, "Twelve: far s.MP holds the defender 10 frames" },
+    { U3S_TWELVE, U3S_KOC_NORMAL, 6, -12, "Twelve: s.HP, close and far share the entry holds the defender 12 frames" },
+    { U3S_TWELVE, U3S_KOC_NORMAL, 9, -8, "Twelve: s.LK holds the defender 8 frames" },
+    { U3S_TWELVE, U3S_KOC_NORMAL, 12, -10, "Twelve: s.MK holds the defender 10 frames" },
+    { U3S_TWELVE, U3S_KOC_NORMAL, 15, -12, "Twelve: s.HK holds the defender 12 frames" },
+    { U3S_TWELVE, U3S_KOC_NORMAL, 30, -10, "Twelve: c.MK holds the defender 10 frames" },
+    { U3S_TWELVE, U3S_KOC_NORMAL, 14, -10, "Twelve: 4MK holds the defender 10 frames" },
+    { U3S_REMY, U3S_KOC_ATTACK, 46, -16, "Remy: LK Cold Blue Kick holds the defender 16 frames" },
+    { U3S_REMY, U3S_KOC_ATTACK, 47, -18, "Remy: MK Cold Blue Kick holds the defender 18 frames" },
+    { U3S_REMY, U3S_KOC_NORMAL, 13, -11, "Remy: far s.MK holds the defender 11 frames" },
+    { U3S_REMY, U3S_KOC_NORMAL, 16, -18, "Remy: far s.HK holds the defender 18 frames" },
+    { U3S_REMY, U3S_KOC_NORMAL, 30, -17, "Remy: c.MK holds the defender 17 frames" },
+    { U3S_REMY, U3S_KOC_NORMAL, 14, -15, "Remy: 6MK holds the defender 15 frames" },
+};
+
+int main(void) {
+    s16 value;
+    size_t i;
+
+    printf("the hitstun items of Third Strike Upper\n");
+
+    for (i = 0; i < sizeof(items) / sizeof(items[0]); i++) {
+        value = applied_hs_you(items[i].char_id, items[i].koc, items[i].index);
+        check(value == items[i].hs_you, items[i].what);
+    }
+
+    /* The crouching Strong of Remy does six points more damage. */
+    {
+        PLW wk;
+
+        setup_character(&wk, U3S_REMY);
+        wk.wu.char_index = 21;
+        upper3s_apply_character(&wk);
+
+        check(upper3s_damage_base(U3S_REMY, &wk.wu) == 85,
+              "Remy: the crouching Strong does the damage of pow 17 (retail 11, Ryu's 18)");
+    }
+
+    /* A move that the design document does not touch keeps the hitstun of the
+     * disc. */
+    value = applied_hs_you(U3S_RYU, U3S_KOC_NORMAL, 0);
+    check(value == retail_hs_you[1], "Ryu: the standing Jab keeps the hitstun of the disc");
+
+    value = applied_hs_you(U3S_KEN, U3S_KOC_NORMAL, 6);
+    check(value == retail_hs_you[7], "Ken: the close Fierce keeps the hitstun of the disc");
+
+    printf("the hitstun items: %d checks, %d failures\n", checks, failures);
+
+    return failures == 0 ? 0 : 1;
+}

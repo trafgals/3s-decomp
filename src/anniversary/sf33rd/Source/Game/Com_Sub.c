@@ -1,3 +1,5 @@
+// Helpers for the CPU opponent AI (passNN.c). Not throw code: throws are in HITCHECK.c, PLPCA.c and PLPCU.c.
+
 #include "sf33rd/Source/Game/Com_Sub.h"
 #include "common.h"
 #include "sf33rd/Source/Game/CMD_MAIN.h"

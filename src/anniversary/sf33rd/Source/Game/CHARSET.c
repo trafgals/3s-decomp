@@ -14,6 +14,10 @@
 #include "sf33rd/Source/Game/cmd_data.h"
 #include "sf33rd/Source/Game/workuser.h"
 
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s_box.h"
+#endif
+
 #define LO_2_BYTES(_val) (((s16*)&_val)[0])
 #define HI_2_BYTES(_val) (((s16*)&_val)[1])
 #define WK_AS_PLW ((PLW*)wk)
@@ -75,6 +79,10 @@ void set_char_move_init(WORK* wk, s16 koc, s16 index) {
     char_move(wk);
 }
 
+// Loads the current frame of an animation chain into WORK. With info == 0 it copies cgd_type words from
+// set_char_ad + cg_ix into the fields from cg_type on, so cg_hit_ix, cg_att_ix, cg_cancel etc. are that
+// frame's values. The chains are char_table[], character data loaded from disc
+// (CHARID.c:set_char_base_data()); startup, active and recovery frames and cancel windows live there.
 void setupCharTableData(WORK* wk, s32 clr, s32 info) {
     u32* dst = (u32*)&wk->cg_type;
     u32* src;
@@ -2795,6 +2803,11 @@ void set_new_attnum(WORK* wk) {
         grade_add_att_renew((WORK_Other*)wk);
     }
 
+    // The frame's attack data: entry cg_att_ix of att_ix_table, which is character data loaded from disc
+    // (CHARID.c:set_char_base_data()). Damage, stun, hitstun etc. of a move live there, not in a C table.
+    // The packed bytes are split below; att.piyo holds two indexes: the high nibble is the meter row
+    // (add_arts_point, a row of bin2obj/gauge.c:_add_arts_gauge) and the low nibble the stun index
+    // (a column of _add_piyo_gauge).
     wk->att = *(wk->att_ix_table + wk->cg_att_ix);
     dspadrs = (uintptr_t)(wk->att_ix_table + wk->cg_att_ix);
     wk->zu_flag = wk->att.level & 0x80;
@@ -2813,6 +2826,7 @@ void set_new_attnum(WORK* wk) {
     wk->dir_atthit = cal_attdir(wk);
 
     if (aag_sw) {
+        // The whiff meter gain: paid when the attack starts, before it can hit.
         add_sp_arts_gauge_init((PLW*)wk);
     }
 
@@ -2834,6 +2848,10 @@ void set_jugde_area(WORK* wk) {
     wk->h_att = wk->attack_adrs + wk->cg_ja.atix;
     wk->h_hos = wk->hosei_adrs + wk->cg_ja.hoix;
     wk->h_han = wk->hand_adrs + (wk->cg_ja.bhix + wk->cg_ja.haix);
+#if defined(UPPER_3S)
+    // Third Strike Upper: box changes for the frames of one move (upper3s_box.h).
+    upper3s_box_frame(wk);
+#endif
 }
 
 void get_char_data_zanzou(WORK* wk) {

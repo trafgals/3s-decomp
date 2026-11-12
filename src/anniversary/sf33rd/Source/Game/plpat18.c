@@ -7,6 +7,10 @@
 #include "sf33rd/Source/Game/PLS02.h"
 #include "sf33rd/Source/Game/workuser.h"
 
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s_ch_q.h"
+#endif
+
 void (*const pl18_exatt_table[18])(PLW*);
 
 void pl18_extra_attack(PLW* wk) {
@@ -97,11 +101,19 @@ void Att_PL18_TOKUSHUKOUDOU(PLW* wk) {
         if (wk->wu.cg_type == 40) {
             wk->wu.cg_type = 0;
             add_sp_arts_gauge_tokushu(wk);
+            // The taunt's defence bonus: damage taken is multiplied by (32 - tk_konjyou) / 32
+            // (PLS02.c:cal_dm_vital_gauge_hosei()), so +4 per taunt up to 12 is x1/x1.14/x1.33/x1.6
+            // effective health.
+#if defined(UPPER_3S)
+            // Third Strike Upper: a smaller bonus for the second and third taunt (Q12).
+            wk->tk_konjyou = upper3s_ch_q_taunt_konjyou(wk->tk_konjyou);
+#else
             wk->tk_konjyou += 4;
 
             if (wk->tk_konjyou > 12) {
                 wk->tk_konjyou = 12;
             }
+#endif
         }
 
         if (wk->wu.cg_type == 64) {

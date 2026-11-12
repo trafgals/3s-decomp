@@ -8,9 +8,45 @@
 #include "sf33rd/Source/Game/PLS01.h"
 #include "sf33rd/Source/Game/PLS02.h"
 
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/CMD_MAIN.h"
+#include "sf33rd/Source/Game/PLCNT.h"
+#include "sf33rd/Source/Game/upper3s_ch_sean.h"
+#endif
+
 void (*const pl12_exatt_table[18])(PLW*);
 
 void pl12_extra_attack(PLW* wk) {
+#if defined(UPPER_3S)
+    // Third Strike Upper (SN6): a kick in the startup of the Fierce Tackle fakes it. The move ends the way
+    // a finished move does (PLS00.c:jumping_cg_type_check(), cg_type 0xFF); the kick is taken out of the
+    // new presses first, so that it does not start a kick at once.
+    if (upper3s_ch_sean_tackle_feint(wk->wu.id, wk->wu.now_koc, wk->wu.char_index, wk->wu.cg_ja.caix,
+                                     wk->cp->sw_new)) {
+        s16 i;
+
+        // The commands the Tackle's motion and the kick have completed (41236 + K is also 236K, the Ryuubi
+        // Kyaku) are dropped and the command slots start again, so the kick does not turn into a move.
+        wk->cp->sw_new &= ~U3S_SEAN_KICKS;
+
+        for (i = 0; i < 56; i++) {
+            if (wk->cp->waza_flag[i] > 0) {
+                wk->cp->waza_flag[i] = 0;
+            }
+        }
+
+        waza_compel_all_init2(wk);
+        wk->guard_flag = 0;
+        clear_chainex_check(wk->wu.id);
+
+        // Back to the neutral stance (PLS00.c:TO_nm_01000(), without its input check on this frame).
+        wk->wu.routine_no[1] = 0;
+        wk->wu.routine_no[2] = 1;
+        wk->wu.routine_no[3] = 0;
+        wk->wu.cg_type = 0;
+        return;
+    }
+#endif
     pl12_exatt_table[wk->wu.routine_no[2] - 16](wk);
 }
 

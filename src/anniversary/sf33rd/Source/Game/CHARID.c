@@ -70,6 +70,11 @@ const CharInitData char_init_data_ex[2] = { { _ef13_char_table,
                                               (UNK_7*)_ef13_catt_table,
                                               NULL } };
 
+// Points a WORK at its character data, by charset id (for players, PLCNT.c:plid_data maps the character index
+// to it). For players, char_init_data[] is filled from the disc when the character loads
+// (texgroup.c:q_ldreq_texture_group()). So every per-move value comes from the disc, not from a C table in this
+// repository: the animation chains (char_table, with each move's frame timing and cancel windows), movement,
+// the body/hand/catch/caught/attack/hosei box tables, and the attack data (att_ix_table).
 void set_char_base_data(WORK* wk) {
     CharInitData* cdat = &char_init_data[wk->charset_id];
     const CharInitData2* cdat2 = &char_init_data2[wk->charset_id];

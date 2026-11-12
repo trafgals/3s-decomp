@@ -6,6 +6,9 @@
 #include "sf33rd/Source/Game/PLPATUNI.h"
 #include "sf33rd/Source/Game/PLS01.h"
 #include "sf33rd/Source/Game/PLS02.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s_ch_ibuki.h"
+#endif
 
 void (*const pl07_exatt_table[18])(PLW*);
 
@@ -280,8 +283,17 @@ void Att_PL07_TOKUSHUKOUDOU(PLW* wk) {
 
         if (wk->wu.cg_type == 30) {
             wk->wu.cg_type = 0;
+#if defined(UPPER_3S)
+            /*
+             * Third Strike Upper: the personal action of Ibuki cannot be
+             * throw teched any more, so the throw tech window is not opened.
+             */
+            wk->tk_dageki = upper3s_ibuki_personal_action_tech_window();
+            wk->tk_nage = upper3s_ibuki_personal_action_tech_window();
+#else
             wk->tk_dageki += 14;
             wk->tk_nage += 14;
+#endif
         }
 
         if (wk->tk_dageki > 28) {

@@ -10,6 +10,12 @@
 #include "sf33rd/Source/Game/texcash.h"
 #include "structs.h"
 
+#if defined(UPPER3S_DUMP)
+#include "sf33rd/Source/Game/upper3s.h"
+
+#include <stdio.h>
+#endif
+
 #if !defined(TARGET_PS2)
 #include <stdlib.h>
 #endif
@@ -168,6 +174,15 @@ void q_ldreq_texture_group(REQ* curr) {
         curr->lds = &texgrplds[curr->group];
 
         if (curr->lds->ok) {
+#if defined(UPPER3S_DUMP)
+            // The data of the character has been read before, so it is
+            // already in the table of the loader.
+            if ((curr->ix >= 1) && (curr->ix <= U3S_CHAR_COUNT)) {
+                fprintf(stderr, "dump: texture group %d already loaded\n", curr->ix);
+                upper3s_dump_character_loaded(curr->ix - 1);
+            }
+#endif
+
             if (bsd->ix1st == 1 || bsd->ix1st == 2) {
                 switch (rckey_work[curr->lds->key].type) {
                 case 3:
@@ -282,6 +297,20 @@ void q_ldreq_texture_group(REQ* curr) {
 
                 for (i = 0; i < 25; i++) {
                     ((uintptr_t*)cit)[i] = ldchd + ((u32*)ldchd)[i];
+                }
+#endif
+
+#if defined(UPPER3S_DUMP)
+                // Dumps the character data of the disc, so that the balance
+                // changes can be derived from the retail values.
+                //
+                // The texture group of a character has the number of the
+                // character plus one as its index, and the data that has just
+                // been read belongs to that character, no matter what the
+                // loader thinks the request was for.
+                if ((curr->ix >= 1) && (curr->ix <= U3S_CHAR_COUNT)) {
+                    fprintf(stderr, "dump: texture group %d read\n", curr->ix);
+                    upper3s_dump_character(curr->ix - 1, cit);
                 }
 #endif
 

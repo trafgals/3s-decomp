@@ -1,3 +1,6 @@
+// Shared by every character (there are no per-character PLSxx.c files): the normal-state machine (nm_*),
+// lever checks and cancel checks (check_cg_cancel_data()).
+
 #include "sf33rd/Source/Game/PLS00.h"
 #include "common.h"
 #include "sf33rd/Source/Game/CHARSET.h"
@@ -6,6 +9,10 @@
 #include "sf33rd/Source/Game/PLPDM.h"
 #include "sf33rd/Source/Game/PLS01.h"
 #include "sf33rd/Source/Game/PLS03.h"
+#if defined(UPPER_3S)
+#include "sf33rd/Source/Game/upper3s.h"
+#include "sf33rd/Source/Game/upper3s_throwtech.h"
+#endif
 
 void nm_01000(PLW* wk);
 void nm_09000(PLW* wk);
@@ -1496,6 +1503,13 @@ void nm_48000(PLW* wk) {
 }
 
 void nm_49000(PLW* wk) {
+#if defined(UPPER_3S)
+    // Third Strike Upper: the character that teched an air throw may not
+    // attack until it has landed again.
+    if (upper3s_throwtech_attack_locked(wk)) {
+        return;
+    }
+#endif
     jumping_cg_type_check(wk);
 }
 
@@ -1809,6 +1823,40 @@ void process_attack(PLW* wk) {
 }
 
 s32 check_cg_cancel_data(PLW* wk) {
+#if defined(UPPER_3S)
+    // Third Strike Upper: the cancels that the design document grants to a
+    // few of the normals. The rules are in upper3s/upper3s_ch_<name>.c and
+    // the one that belongs to the character is chosen here.
+    //
+    // The move is addressed by the kind of character data it lives in (the
+    // slot 4 holds the normal attacks) and by its char_ix, the index of the
+    // move in that kind of data. The routine number of the state machine
+    // cannot be used: it is the behaviour class of the normal, and it is the
+    // same for the standing and for the crouching Medium Punch.
+    //
+    // The hook has to be before the test below, because a move whose mask of
+    // the disc is empty never reaches the tests of the cancels.
+    //
+    // wk->as is the assignment entry of the current move, set when a move starts
+    // (PLS03.c sets it for every normal). It is NULL until the player's first move of
+    // the round, and this function runs on neutral frames too (nm_01000() at the start
+    // of the round), so without a move there is nothing to look up. Found by the
+    // headless fight harness: the first frame of every fight crashed here.
+    //
+    // A special move can change its animation while it runs (Q's rush turns into its overhead version when
+    // the punch is held: assignment 25, animation 33), so for special moves (koc 5) the animation that is
+    // playing, wk->wu.char_index, is passed instead of the assignment's.
+    if (wk->as != NULL) {
+        // The rules that depend on the input: a target combo follow-up pressed early is kept for the frames
+        // of the target combo (AL4), Remy's crouching lights chain into each other (RM6).
+        upper3s_cancel_input(wk);
+        wk->wu.cg_cancel = upper3s_cancel_mask(wk->player_number, wk->wu.now_koc,
+                                               (wk->wu.now_koc == 5) ? wk->wu.char_index : wk->as->char_ix,
+                                               ((wk->wu.cg_ja.atix != 0) ? U3S_FRAME_ACTIVE : 0) |
+                                                   ((wk->wu.hit_stop != 0) ? U3S_FRAME_HITSTOP : 0),
+                                               wk->wu.cg_cancel);
+    }
+#endif
     if (wk->wu.cg_cancel == 0) {
         return 0;
     }
