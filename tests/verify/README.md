@@ -21,15 +21,19 @@ rejected by the policy, so a push to a review branch shows up as a failed run
 even though the game built.
 
 The checker reads the guard of the deploy job and *evaluates* it the way GitHub
-does, in every event the workflow runs on and against every ref it may run on:
+does, in every event the workflow runs on and against a sample of the refs it
+may run on:
 
 * a push of `main` and a manual run of `main` -> the deploy job has to run;
-* a push of another branch, a tag, a manual run of another branch and a pull
-  request -> the deploy job has to be skipped, because the environment
-  rejects every one of them;
+* a push of another branch, a tag and a manual run of another branch -> the
+  deploy job has to be skipped, because the environment rejects every one of
+  them;
 * the refs that the guard names are checked as well, so that a guard that
   deploys on a branch of its own is reported even when that branch is not one
   of the refs above.
+
+The workflow runs on a push and on a manual run, so the refs it can have are
+branches and tags, and the checker reads the context of those events only.
 
 The guard is an expression of the GitHub Actions language, and the checker
 parses it instead of handing it to Python's `eval`: the operators of the

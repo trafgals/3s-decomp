@@ -17,9 +17,13 @@ GitHub does, against the events and the refs of the workflow:
 
 * a push of main and a manual run of main   -> the deploy job runs;
 * a push of another branch, a tag, a manual
-  run of another branch, a pull request     -> the deploy job is skipped;
+  run of another branch                     -> the deploy job is skipped;
 * the build job runs in every case, so a branch push still compiles the
   game and still fails the run when the game does not build.
+
+The workflow runs on a push and on a manual run, so the refs it can have are
+branches and tags.  The refs that the guard names are checked as well, so
+that a guard that deploys on a branch of its own is reported.
 
 The guard is an expression of the GitHub Actions language, and it is parsed
 here instead of being handed to Python's eval.  The parser reads the whole
@@ -50,20 +54,19 @@ WORKFLOW = ROOT / ".github" / "workflows" / "pages.yml"
 MAIN = "refs/heads/main"
 MAIN_NAME = "main"
 
-# The events the workflow runs on: a push and a manual run.
+# The events the workflow runs on: a push and a manual run.  The workflow
+# does not run on a pull request, so the refs it can have are branches and
+# tags.
 PUSH = "push"
 DISPATCH = "workflow_dispatch"
-PULL_REQUEST = "pull_request"
 
 # The events in which the deploy job has to run.
 DEPLOY_EVENTS = (PUSH, DISPATCH)
 
 # The refs the guard is evaluated against: the main branch, two other
-# branches, a tag, and the ref of a pull request, which is not a branch at
-# all.
+# branches and a tag.
 BRANCH_REFS = ("refs/heads/ccr-579fa5e1-azpt7p", "refs/heads/feat/auto-20261020-abd7ca61")
 TAG_REFS = ("refs/tags/v1.0",)
-PULL_REFS = ("refs/pull/85/merge",)
 
 # The files that the workflow has to run on, so that a change of them is
 # checked: the checker itself, its tests, the requirements it needs and the
@@ -78,9 +81,14 @@ WATCHED_PATHS = (
 # The tokens of the subset of the workflow language that a job level "if"
 # is written in: a string, a number, a name of the context, and the
 # operators ==, !=, &&, ||, !, ( and ).
+#
+# A string literal is written in single quotes: "Wrapping with double quotes
+# will throw an error" is what the documentation of the language says, so a
+# guard with a double quoted string is a guard that GitHub refuses, and it
+# is refused here as well.
 TOKEN = re.compile(
     r"""
-      (?P<string>'(?:[^']|'')*'|"(?:[^"\\]|\\.)*")
+      (?P<string>'(?:[^']|'')*')
     | (?P<number>[0-9]+)
     | (?P<name>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)
     | (?P<op>&&|\|\||==|!=|\(|\)|!)
@@ -100,27 +108,30 @@ def github_context(event: str, ref: str) -> dict:
     are the ones GitHub sets for the events and the refs the guard is
     evaluated against:
 
-    * head_ref and base_ref are set for a pull request only.  On a push
-      and on a manual run they are empty, so a guard that reads them
-      does not deploy on those events.
+    * ref_name is the short name of the ref: the name of the branch or of
+      the tag, with the "refs/heads/" or the "refs/tags/" taken off.
+    * head_ref and base_ref are empty: they are set for a pull request
+      only, and the workflow runs on a push and on a manual run.
     * event_name is the name of the event, so a guard that reads it is
       checked in every event: the deploy job has to run on a push of main
       and on a manual run of main.
     """
     parts = ref.split("/")
     if len(parts) >= 3 and parts[0] == "refs" and parts[1] == "heads":
-        ref_type, ref_name = "branch", "/".join(parts[2:])
+        ref_type = "branch"
     elif len(parts) >= 3 and parts[0] == "refs" and parts[1] == "tags":
-        ref_type, ref_name = "tag", "/".join(parts[2:])
+        ref_type = "tag"
     elif len(parts) >= 3 and parts[0] == "refs" and parts[1] == "pull":
-        ref_type, ref_name = "pull_request", parts[2]
+        ref_type = "pull_request"
     else:
-        ref_type, ref_name = "unknown", ref
-    context = {
+        ref_type = "unknown"
+    return {
         "ref": ref,
-        "ref_name": ref_name,
+        "ref_name": "/".join(parts[2:]) if len(parts) > 2 else ref,
         "ref_type": ref_type,
         "event_name": event,
+        "head_ref": "",
+        "base_ref": "",
         "repository": "trafgals/3s-decomp",
         "actor": "trafgals",
         "workflow": "the web build",
@@ -129,13 +140,6 @@ def github_context(event: str, ref: str) -> dict:
         "run_id": "1",
         "run_number": "1",
     }
-    if event == PULL_REQUEST:
-        context["head_ref"] = ""
-        context["base_ref"] = MAIN_NAME
-    else:
-        context["head_ref"] = ""
-        context["base_ref"] = ""
-    return context
 
 
 # The status functions of the workflow language.  A job level "if" is
@@ -154,23 +158,11 @@ BUILD_FUNCTIONS = ("always", "failure", "cancelled")
 
 
 def unquote(text: str) -> str:
-    """The value of a string literal of the workflow language."""
-    if text[0] == "'":
-        # A single quote is written twice inside a single quoted string.
-        return text[1:-1].replace("''", "'")
-    escapes = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"', "'": "'"}
-    body = text[1:-1]
-    out = []
-    index = 0
-    while index < len(body):
-        char = body[index]
-        if char == "\\" and index + 1 < len(body):
-            index += 1
-            out.append(escapes.get(body[index], body[index]))
-        else:
-            out.append(char)
-        index += 1
-    return "".join(out)
+    """The value of a string literal of the workflow language.
+
+    A single quote is written twice inside a single quoted string.
+    """
+    return text[1:-1].replace("''", "'")
 
 
 def tokenize(expression: str) -> list[tuple[str, object]]:
@@ -327,6 +319,9 @@ def evaluate_node(node: tuple, context: dict) -> object:
     if kind in ("==", "!="):
         left = evaluate_node(node[1], context)
         right = evaluate_node(node[2], context)
+        if isinstance(left, str) and isinstance(right, str):
+            # GitHub ignores the case when it compares strings.
+            left, right = left.lower(), right.lower()
         return left == right if kind == "==" else left != right
     if kind == "and":
         return bool(evaluate_node(node[1], context)) and bool(evaluate_node(node[2], context))
@@ -354,6 +349,10 @@ def mentioned_refs(node: tuple) -> set[str]:
     A guard that deploys on a branch it names is a guard that the
     deployment branch policy of the environment rejects, and that branch
     is not necessarily one of the refs the guard is evaluated against.
+
+    Only the refs that the workflow can run on are candidates: the
+    workflow runs on a push and on a manual run, so it can run on a
+    branch and on a tag, and on nothing else.
     """
     refs: set[str] = set()
     if node[0] in ("==", "!="):
@@ -361,7 +360,7 @@ def mentioned_refs(node: tuple) -> set[str]:
             if value[0] != "string" or other[0] != "context":
                 continue
             if other[1] == "github.ref":
-                refs.add(value[1])
+                refs.add(value[1].lower())
             elif other[1] == "github.ref_name":
                 # The name of a ref is the name of a branch and the name of
                 # a tag, so both are checked: a guard that matches the
@@ -370,9 +369,9 @@ def mentioned_refs(node: tuple) -> set[str]:
                 # that is named like the main branch is not a thing, and
                 # the name of the main branch is the name that the guard
                 # has to match.
-                refs.add("refs/heads/" + value[1])
-                if value[1] != MAIN_NAME:
-                    refs.add("refs/tags/" + value[1])
+                refs.add("refs/heads/" + value[1].lower())
+                if value[1].lower() != MAIN_NAME:
+                    refs.add("refs/tags/" + value[1].lower())
         return refs
     for child in node[1:]:
         if isinstance(child, tuple):
@@ -380,15 +379,20 @@ def mentioned_refs(node: tuple) -> set[str]:
     return refs
 
 
-def evaluation_refs(event: str, named: set[str]) -> list[str]:
-    """The refs the guard is evaluated against, for an event."""
-    if event == PULL_REQUEST:
-        return list(PULL_REFS)
+def evaluation_refs(named: set[str]) -> list[str]:
+    """The refs the guard is evaluated against.
+
+    The main branch, a sample of the other branches and of the tags, and
+    the refs that the guard names: a guard that deploys on a ref of its
+    own is a guard that the environment rejects.
+    """
     refs = [MAIN]
     refs += [ref for ref in BRANCH_REFS + TAG_REFS if ref != MAIN]
-    # The refs that the guard names are checked as well, so that a guard
-    # that deploys on a branch of its own is reported.
-    refs += sorted(ref for ref in named if ref not in refs)
+    refs += sorted(
+        ref
+        for ref in named
+        if ref not in refs and (ref.startswith("refs/heads/") or ref.startswith("refs/tags/"))
+    )
     return refs
 
 
@@ -467,14 +471,14 @@ def check_workflow(path: Path) -> tuple[int, list[str]]:
             node = parse_guard(guard)
             named = mentioned_refs(node)
             results = []
-            for event in (PUSH, DISPATCH, PULL_REQUEST):
-                for ref in evaluation_refs(event, named):
+            for event in DEPLOY_EVENTS:
+                for ref in evaluation_refs(named):
                     results.append((event, ref, bool(evaluate_node(node, github_context(event, ref)))))
         except GuardError as error:
             failures.append(f"the guard cannot be evaluated: {error}")
         else:
             for event, ref, result in results:
-                if event in DEPLOY_EVENTS and ref == MAIN:
+                if ref == MAIN:
                     check(
                         result,
                         f"the guard does not deploy on {event} of {ref}: {guard!r}",

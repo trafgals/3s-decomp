@@ -41,12 +41,10 @@ class CheckerTest(unittest.TestCase):
         text = workflow_text()
         self.assertIn(GUARD, text)
         expression = GUARD.strip()[len("if:"):].strip()
-        for event in (C.PUSH, C.DISPATCH):
+        for event in C.DEPLOY_EVENTS:
             self.assertTrue(C.evaluate(expression, event, C.MAIN), event)
-        for event in (C.PUSH, C.DISPATCH):
             for ref in C.BRANCH_REFS + C.TAG_REFS:
                 self.assertFalse(C.evaluate(expression, event, ref), f"{event} {ref}")
-        self.assertFalse(C.evaluate(expression, C.PULL_REQUEST, C.PULL_REFS[0]))
 
     def test_pyyaml_is_in_the_requirements(self):
         # The checker reads the workflow with PyYAML, so PyYAML has to be in
@@ -131,21 +129,35 @@ class ExpressionTest(unittest.TestCase):
         with self.assertRaises(C.GuardError):
             C.evaluate("contains(github.ref, 'main')", C.PUSH, "refs/heads/main")
 
-    def test_the_head_and_the_base_ref_are_empty_on_a_push(self):
-        # head_ref and base_ref are set for a pull request only, so a
-        # guard that reads them does not deploy on a push.
+    def test_the_head_and_the_base_ref_are_empty(self):
+        # head_ref and base_ref are set for a pull request only, and the
+        # workflow runs on a push and on a manual run, so they are empty:
+        # a guard that reads them does not deploy.
         self.assertFalse(C.evaluate("github.head_ref == 'main'", C.PUSH, "refs/heads/main"))
         self.assertFalse(C.evaluate("github.base_ref == 'main'", C.PUSH, "refs/heads/main"))
-        self.assertTrue(
-            C.evaluate("github.base_ref == 'main'", C.PULL_REQUEST, C.PULL_REFS[0])
-        )
+        self.assertFalse(C.evaluate("github.base_ref == 'main'", C.DISPATCH, "refs/heads/main"))
+
+    def test_the_ref_name_is_the_short_name_of_the_ref(self):
+        context = C.github_context(C.PUSH, "refs/heads/feature/x")
+        self.assertEqual("feature/x", context["ref_name"])
+        self.assertEqual("branch", context["ref_type"])
+        context = C.github_context(C.PUSH, "refs/tags/v1.0")
+        self.assertEqual("v1.0", context["ref_name"])
+        self.assertEqual("tag", context["ref_type"])
 
     def test_the_event_name_is_the_name_of_the_event(self):
         self.assertTrue(C.evaluate("github.event_name == 'push'", C.PUSH, "refs/heads/main"))
         self.assertFalse(C.evaluate("github.event_name == 'push'", C.DISPATCH, "refs/heads/main"))
-        self.assertFalse(
-            C.evaluate("github.event_name == 'push'", C.PULL_REQUEST, C.PULL_REFS[0])
-        )
+
+    def test_a_string_literal_in_double_quotes_is_refused(self):
+        # GitHub throws an error on a string literal in double quotes.
+        with self.assertRaises(C.GuardError):
+            C.evaluate('github.ref == "refs/heads/main"', C.PUSH, "refs/heads/main")
+
+    def test_the_case_of_the_strings_is_ignored(self):
+        # GitHub ignores the case when it compares strings.
+        self.assertTrue(C.evaluate("github.ref == 'REFS/HEADS/MAIN'", C.PUSH, "refs/heads/main"))
+        self.assertTrue(C.evaluate("github.ref_name == 'MAIN'", C.PUSH, "refs/heads/main"))
 
 
 class BrokenWorkflowTest(unittest.TestCase):
