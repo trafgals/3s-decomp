@@ -8,3 +8,5 @@ pyelftools
 graphviz
 tabulate
 spimdisasm==1.35.0
+# The checker of the Pages workflow reads the workflow with PyYAML.
+pyyaml

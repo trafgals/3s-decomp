@@ -149,9 +149,10 @@ The specification is Mike Z's post (linked in §1). It is the only source for *w
   All of them read the disc's files from `rom/THIRD/` (`SF33RD.AFS` and the `IOP` directory) in the working directory.
 
 ### 5.2 Checklist before committing
-1. **Functional test (§2.2):** an automated test for the change must exist and pass. There are two suites:
+1. **Functional test (§2.2):** an automated test for the change must exist and pass. There are three suites:
    - `make test`: unit tests of the patch layer on synthetic characters (`tests/upper3s/`), no game data needed.
    - `make match-test`: fight tests (`tests/match/`) that play scripted fights in the vanilla and the 3s' headless builds and measure startup, advantage, damage, stun and meter in the real engine. They need `SF33_GAME_DATA` pointing at the disc's files. A balance change is verified only when a fight test measures it.
+   - `make verify-test`: tests of the tools of the repository (`tests/verify/`), no game data needed. The Pages workflow only deploys from `main`, and `tools/verify/check_pages_workflow.py` checks that by evaluating the guard of the deploy job; its own tests check the checker against workflows that are broken on purpose.
 2. **The vanilla build stays matching:** with `UPPER_3S` off, `make build` must still print `Files match ✅`. Every change to a shared file goes behind `#if defined(UPPER_3S)` / `#if !defined(UPPER_3S)`. Without the game file, `bash tools/verify/ps2_touched_sources.sh` compares the preprocessed PS2 sources with those of the retail-matched commit, and for a comment-only edit `python3 tools/check_comments_only.py` compares what the compiler sees before and after.
 3. **Struct layout:** `PLW` is 0x46C bytes, `WORK` 0x388, `SA_DATA` 0x10 and `SPG_DAT` 0x34; the field offsets are commented in `include/structs.h` and the headers. Do not change them. Keep 3s' state in separate structures. (There is no `GAUGE` struct.)
 4. **Compiler:** game code must compile under `mwccps2` with the Makefile's flags (the PS2 build) and under clang with `-Werror` (the host builds).
