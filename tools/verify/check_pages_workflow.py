@@ -13,10 +13,11 @@ the deploy job fails with
 which is what made every push to a review branch show up as a failed run
 even though the game built.  The deploy job therefore carries a guard that
 restricts it to main.  The guard is checked here by *evaluating* it, the way
-GitHub does, against a set of refs:
+GitHub does, against the events and the refs of the workflow:
 
-* refs/heads/main                  -> the deploy job runs;
-* any other branch, a tag, a fork   -> the deploy job is skipped;
+* a push of main and a manual run of main   -> the deploy job runs;
+* a push of another branch, a tag, a manual
+  run of another branch, a pull request     -> the deploy job is skipped;
 * the build job runs in every case, so a branch push still compiles the
   game and still fails the run when the game does not build.
 
@@ -45,57 +46,34 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent.parent
 WORKFLOW = ROOT / ".github" / "workflows" / "pages.yml"
 
-# The refs the guard is evaluated against.  The last one is the ref of a
-# pull request, which is not a branch at all.
-REFS = [
-    "refs/heads/main",
-    "refs/heads/ccr-579fa5e1-azpt7p",
-    "refs/heads/feat/auto-20261020-abd7ca61",
-    "refs/tags/v1.0",
-    "refs/pull/85/merge",
-]
+# The main branch, which is the only ref that may deploy.
+MAIN = "refs/heads/main"
+MAIN_NAME = "main"
 
-def github_context(ref: str) -> dict:
-    """The github context of a ref.
+# The events the workflow runs on: a push and a manual run.
+PUSH = "push"
+DISPATCH = "workflow_dispatch"
+PULL_REQUEST = "pull_request"
 
-    These are the parts of the context a guard may read; the values are the
-    ones GitHub sets for the refs the guard is evaluated against.
-    """
-    parts = ref.split("/")
-    if len(parts) >= 3 and parts[0] == "refs" and parts[1] == "heads":
-        ref_type, ref_name, head_ref = "branch", "/".join(parts[2:]), "/".join(parts[2:])
-    elif len(parts) >= 3 and parts[0] == "refs" and parts[1] == "tags":
-        ref_type, ref_name, head_ref = "tag", "/".join(parts[2:]), ""
-    elif len(parts) >= 3 and parts[0] == "refs" and parts[1] == "pull":
-        ref_type, ref_name, head_ref = "pull_request", parts[2], ""
-    else:
-        ref_type, ref_name, head_ref = "unknown", ref, ""
-    return {
-        "ref": ref,
-        "ref_name": ref_name,
-        "ref_type": ref_type,
-        "head_ref": head_ref,
-        "base_ref": "main",
-        "event_name": "push",
-        "repository": "trafgals/3s-decomp",
-        "actor": "trafgals",
-        "workflow": "the web build",
-        "job": "deploy",
-        "sha": "0" * 40,
-        "run_id": "1",
-        "run_number": "1",
-    }
+# The events in which the deploy job has to run.
+DEPLOY_EVENTS = (PUSH, DISPATCH)
 
+# The refs the guard is evaluated against: the main branch, two other
+# branches, a tag, and the ref of a pull request, which is not a branch at
+# all.
+BRANCH_REFS = ("refs/heads/ccr-579fa5e1-azpt7p", "refs/heads/feat/auto-20261020-abd7ca61")
+TAG_REFS = ("refs/tags/v1.0",)
+PULL_REFS = ("refs/pull/85/merge",)
 
-# The status functions of the workflow language.  The checker looks at the
-# guard alone, and the job it guards runs after a build that succeeded, so
-# success() and always() are true and failure() and cancelled() are false.
-STATUS_FUNCTIONS = {
-    "success": True,
-    "always": True,
-    "failure": False,
-    "cancelled": False,
-}
+# The files that the workflow has to run on, so that a change of them is
+# checked: the checker itself, its tests, the requirements it needs and the
+# workflow that carries it.
+WATCHED_PATHS = (
+    "tools/verify/check_pages_workflow.py",
+    "tests/verify/**",
+    "tools/requirements-python.txt",
+    ".github/workflows/pages.yml",
+)
 
 # The tokens of the subset of the workflow language that a job level "if"
 # is written in: a string, a number, a name of the context, and the
@@ -113,6 +91,66 @@ TOKEN = re.compile(
 
 class GuardError(ValueError):
     """The guard is not an expression this checker knows."""
+
+
+def github_context(event: str, ref: str) -> dict:
+    """The github context of an event and a ref.
+
+    These are the parts of the context a guard may read, and the values
+    are the ones GitHub sets for the events and the refs the guard is
+    evaluated against:
+
+    * head_ref and base_ref are set for a pull request only.  On a push
+      and on a manual run they are empty, so a guard that reads them
+      does not deploy on those events.
+    * event_name is the name of the event, so a guard that reads it is
+      checked in every event: the deploy job has to run on a push of main
+      and on a manual run of main.
+    """
+    parts = ref.split("/")
+    if len(parts) >= 3 and parts[0] == "refs" and parts[1] == "heads":
+        ref_type, ref_name = "branch", "/".join(parts[2:])
+    elif len(parts) >= 3 and parts[0] == "refs" and parts[1] == "tags":
+        ref_type, ref_name = "tag", "/".join(parts[2:])
+    elif len(parts) >= 3 and parts[0] == "refs" and parts[1] == "pull":
+        ref_type, ref_name = "pull_request", parts[2]
+    else:
+        ref_type, ref_name = "unknown", ref
+    context = {
+        "ref": ref,
+        "ref_name": ref_name,
+        "ref_type": ref_type,
+        "event_name": event,
+        "repository": "trafgals/3s-decomp",
+        "actor": "trafgals",
+        "workflow": "the web build",
+        "job": "deploy",
+        "sha": "0" * 40,
+        "run_id": "1",
+        "run_number": "1",
+    }
+    if event == PULL_REQUEST:
+        context["head_ref"] = ""
+        context["base_ref"] = MAIN_NAME
+    else:
+        context["head_ref"] = ""
+        context["base_ref"] = ""
+    return context
+
+
+# The status functions of the workflow language.  A job level "if" is
+# "success() and the expression" unless the expression holds a status
+# function of its own, and the state of the build is not something this
+# checker knows, so only success() is read here: always(), failure() and
+# cancelled() change the meaning of the guard with the state of the build,
+# and a guard that uses them is refused instead of being read as if the
+# build had succeeded.
+STATUS_FUNCTIONS = {
+    "success": True,
+}
+
+# The status functions that depend on the state of the build.
+BUILD_FUNCTIONS = ("always", "failure", "cancelled")
 
 
 def unquote(text: str) -> str:
@@ -276,9 +314,14 @@ def evaluate_node(node: tuple, context: dict) -> object:
         return lookup(context, node[1])
     if kind == "call":
         name = node[1]
-        if name not in STATUS_FUNCTIONS:
-            raise GuardError(f"the guard calls {name!r}, which this checker does not know")
-        return STATUS_FUNCTIONS[name]
+        if name in STATUS_FUNCTIONS:
+            return STATUS_FUNCTIONS[name]
+        if name in BUILD_FUNCTIONS:
+            raise GuardError(
+                f"the guard calls {name}(), which changes with the state of the build, "
+                f"so this checker cannot read it"
+            )
+        raise GuardError(f"the guard calls {name}(), which this checker does not know")
     if kind == "not":
         return not evaluate_node(node[1], context)
     if kind in ("==", "!="):
@@ -292,17 +335,17 @@ def evaluate_node(node: tuple, context: dict) -> object:
     raise GuardError(f"the guard cannot be read: {node!r}")
 
 
-def evaluate(expression: str, ref: str) -> bool:
-    """Evaluate a job level "if" expression the way GitHub does."""
-    return bool(evaluate_node(parse_guard(expression), github_context(ref)))
-
-
 def parse_guard(expression: str) -> tuple:
     """The parsed guard of a job."""
     expression = expression.strip()
     if expression.startswith("${{") and expression.endswith("}}"):
         expression = expression[3:-2].strip()
     return Parser(tokenize(expression)).parse()
+
+
+def evaluate(expression: str, event: str, ref: str) -> bool:
+    """Evaluate a job level "if" expression the way GitHub does."""
+    return bool(evaluate_node(parse_guard(expression), github_context(event, ref)))
 
 
 def mentioned_refs(node: tuple) -> set[str]:
@@ -320,11 +363,32 @@ def mentioned_refs(node: tuple) -> set[str]:
             if other[1] == "github.ref":
                 refs.add(value[1])
             elif other[1] == "github.ref_name":
+                # The name of a ref is the name of a branch and the name of
+                # a tag, so both are checked: a guard that matches the
+                # name of a tag is a guard that deploys on that tag.  The
+                # name of the main branch is not checked as a tag: a tag
+                # that is named like the main branch is not a thing, and
+                # the name of the main branch is the name that the guard
+                # has to match.
                 refs.add("refs/heads/" + value[1])
+                if value[1] != MAIN_NAME:
+                    refs.add("refs/tags/" + value[1])
         return refs
     for child in node[1:]:
         if isinstance(child, tuple):
             refs |= mentioned_refs(child)
+    return refs
+
+
+def evaluation_refs(event: str, named: set[str]) -> list[str]:
+    """The refs the guard is evaluated against, for an event."""
+    if event == PULL_REQUEST:
+        return list(PULL_REFS)
+    refs = [MAIN]
+    refs += [ref for ref in BRANCH_REFS + TAG_REFS if ref != MAIN]
+    # The refs that the guard names are checked as well, so that a guard
+    # that deploys on a branch of its own is reported.
+    refs += sorted(ref for ref in named if ref not in refs)
     return refs
 
 
@@ -379,15 +443,12 @@ def check_workflow(path: Path) -> tuple[int, list[str]]:
     # "on" is a boolean in YAML 1.1.
     triggers = workflow.get("on", workflow.get(True)) or {}
     paths = (triggers.get("push") or {}).get("paths") or []
-    check(
-        "tools/verify/check_pages_workflow.py" in paths,
-        "the workflow does not run on a change of the checker, so a change of "
-        "the checker is not checked",
-    )
-    check(
-        ".github/workflows/pages.yml" in paths,
-        "the workflow does not run on a change of itself",
-    )
+    for watched in WATCHED_PATHS:
+        check(
+            watched in paths,
+            f"the workflow does not run on a change of {watched}, so a change of "
+            f"it is not checked",
+        )
 
     guard = deploy.get("if")
     if guard is None:
@@ -399,33 +460,30 @@ def check_workflow(path: Path) -> tuple[int, list[str]]:
         failures.append(f"the guard is not an expression: {guard!r}")
     else:
         check(
-            "main" in guard.lower(),
+            MAIN_NAME in guard.lower(),
             f"the guard does not mention the main branch: {guard!r}",
         )
         try:
             node = parse_guard(guard)
-            results = {ref: bool(evaluate_node(node, github_context(ref))) for ref in REFS}
-            # The refs that the guard names are checked as well: a guard
-            # that deploys on a branch of its own is a guard that the
-            # environment rejects, and that branch is not necessarily one
-            # of the refs above.
-            for ref in sorted(mentioned_refs(node) - {"refs/heads/main"}):
-                results[ref] = bool(evaluate_node(node, github_context(ref)))
+            named = mentioned_refs(node)
+            results = []
+            for event in (PUSH, DISPATCH, PULL_REQUEST):
+                for ref in evaluation_refs(event, named):
+                    results.append((event, ref, bool(evaluate_node(node, github_context(event, ref)))))
         except GuardError as error:
             failures.append(f"the guard cannot be evaluated: {error}")
         else:
-            for ref, result in results.items():
-                if ref == "refs/heads/main":
-                    check(result, f"the guard does not deploy on main: {guard!r}")
-                elif ref in REFS:
+            for event, ref, result in results:
+                if event in DEPLOY_EVENTS and ref == MAIN:
                     check(
-                        not result,
-                        f"the guard deploys on {ref}, which the environment rejects: {guard!r}",
+                        result,
+                        f"the guard does not deploy on {event} of {ref}: {guard!r}",
                     )
                 else:
                     check(
                         not result,
-                        f"the guard deploys on {ref}, which is not the main branch: {guard!r}",
+                        f"the guard deploys on {event} of {ref}, which the environment "
+                        f"rejects: {guard!r}",
                     )
 
     return passed, failures

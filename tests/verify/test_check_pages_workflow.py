@@ -41,11 +41,12 @@ class CheckerTest(unittest.TestCase):
         text = workflow_text()
         self.assertIn(GUARD, text)
         expression = GUARD.strip()[len("if:"):].strip()
-        self.assertTrue(C.evaluate(expression, "refs/heads/main"))
-        for ref in C.REFS:
-            if ref == "refs/heads/main":
-                continue
-            self.assertFalse(C.evaluate(expression, ref), ref)
+        for event in (C.PUSH, C.DISPATCH):
+            self.assertTrue(C.evaluate(expression, event, C.MAIN), event)
+        for event in (C.PUSH, C.DISPATCH):
+            for ref in C.BRANCH_REFS + C.TAG_REFS:
+                self.assertFalse(C.evaluate(expression, event, ref), f"{event} {ref}")
+        self.assertFalse(C.evaluate(expression, C.PULL_REQUEST, C.PULL_REFS[0]))
 
     def test_pyyaml_is_in_the_requirements(self):
         # The checker reads the workflow with PyYAML, so PyYAML has to be in
@@ -71,50 +72,80 @@ class ExpressionTest(unittest.TestCase):
     def test_the_and_operator_is_evaluated(self):
         # "&&" is an operator of the workflow language and not of Python.
         expression = "github.ref == 'refs/heads/main' && github.ref_name == 'main'"
-        self.assertTrue(C.evaluate(expression, "refs/heads/main"))
-        self.assertFalse(C.evaluate(expression, "refs/heads/other"))
+        self.assertTrue(C.evaluate(expression, C.PUSH, "refs/heads/main"))
+        self.assertFalse(C.evaluate(expression, C.PUSH, "refs/heads/other"))
 
     def test_the_or_operator_is_evaluated(self):
         expression = "github.ref == 'refs/heads/main' || github.ref == 'refs/heads/other'"
-        self.assertTrue(C.evaluate(expression, "refs/heads/main"))
-        self.assertTrue(C.evaluate(expression, "refs/heads/other"))
-        self.assertFalse(C.evaluate(expression, "refs/heads/third"))
+        self.assertTrue(C.evaluate(expression, C.PUSH, "refs/heads/main"))
+        self.assertTrue(C.evaluate(expression, C.PUSH, "refs/heads/other"))
+        self.assertFalse(C.evaluate(expression, C.PUSH, "refs/heads/third"))
 
     def test_the_not_operator_is_evaluated(self):
         expression = "!(github.ref == 'refs/heads/main')"
-        self.assertFalse(C.evaluate(expression, "refs/heads/main"))
-        self.assertTrue(C.evaluate(expression, "refs/heads/other"))
+        self.assertFalse(C.evaluate(expression, C.PUSH, "refs/heads/main"))
+        self.assertTrue(C.evaluate(expression, C.PUSH, "refs/heads/other"))
 
     def test_the_parentheses_are_evaluated(self):
-        expression = "(github.ref == 'refs/heads/main' || github.ref == 'refs/heads/other') && github.ref_name != 'other'"
-        self.assertTrue(C.evaluate(expression, "refs/heads/main"))
-        self.assertFalse(C.evaluate(expression, "refs/heads/other"))
+        expression = (
+            "(github.ref == 'refs/heads/main' || github.ref == 'refs/heads/other') "
+            "&& github.ref_name != 'other'"
+        )
+        self.assertTrue(C.evaluate(expression, C.PUSH, "refs/heads/main"))
+        self.assertFalse(C.evaluate(expression, C.PUSH, "refs/heads/other"))
 
     def test_the_expression_wrapper_is_removed(self):
-        self.assertTrue(C.evaluate("${{ github.ref == 'refs/heads/main' }}", "refs/heads/main"))
+        self.assertTrue(C.evaluate("${{ github.ref == 'refs/heads/main' }}", C.PUSH, "refs/heads/main"))
 
     def test_the_boolean_literals_are_evaluated(self):
-        self.assertTrue(C.evaluate("true", "refs/heads/main"))
-        self.assertFalse(C.evaluate("false", "refs/heads/main"))
-        self.assertTrue(C.evaluate("github.ref == 'refs/heads/main' && true", "refs/heads/main"))
+        self.assertTrue(C.evaluate("true", C.PUSH, "refs/heads/main"))
+        self.assertFalse(C.evaluate("false", C.PUSH, "refs/heads/main"))
+        self.assertTrue(C.evaluate("github.ref == 'refs/heads/main' && true", C.PUSH, "refs/heads/main"))
+
+    def test_the_success_function_is_evaluated(self):
+        self.assertTrue(C.evaluate("success()", C.PUSH, "refs/heads/main"))
+
+    def test_the_status_functions_that_depend_on_the_build_are_refused(self):
+        # always(), failure() and cancelled() change the meaning of the
+        # guard with the state of the build, which the checker does not
+        # know: a guard that uses them is refused.
+        for function in ("always()", "failure()", "cancelled()"):
+            with self.assertRaises(C.GuardError):
+                C.evaluate(function, C.PUSH, "refs/heads/main")
 
     def test_a_guard_with_text_after_the_expression_is_refused(self):
         # The guard is read in full: a guard that is only half read is a
         # guard that is checked in a way that does not match GitHub's.
         with self.assertRaises(C.GuardError):
-            C.evaluate("github.ref == 'refs/heads/main' && evil()", "refs/heads/main")
+            C.evaluate("github.ref == 'refs/heads/main' && evil()", C.PUSH, "refs/heads/main")
 
     def test_a_guard_that_is_not_an_expression_is_refused(self):
         with self.assertRaises(C.GuardError):
-            C.evaluate("github.ref == 'refs/heads/main'; import os", "refs/heads/main")
+            C.evaluate("github.ref == 'refs/heads/main'; import os", C.PUSH, "refs/heads/main")
 
     def test_a_guard_that_reads_an_unknown_name_is_refused(self):
         with self.assertRaises(C.GuardError):
-            C.evaluate("github.event.pull_request.number == 1", "refs/heads/main")
+            C.evaluate("github.event.pull_request.number == 1", C.PUSH, "refs/heads/main")
 
     def test_a_guard_that_calls_an_unknown_function_is_refused(self):
         with self.assertRaises(C.GuardError):
-            C.evaluate("contains(github.ref, 'main')", "refs/heads/main")
+            C.evaluate("contains(github.ref, 'main')", C.PUSH, "refs/heads/main")
+
+    def test_the_head_and_the_base_ref_are_empty_on_a_push(self):
+        # head_ref and base_ref are set for a pull request only, so a
+        # guard that reads them does not deploy on a push.
+        self.assertFalse(C.evaluate("github.head_ref == 'main'", C.PUSH, "refs/heads/main"))
+        self.assertFalse(C.evaluate("github.base_ref == 'main'", C.PUSH, "refs/heads/main"))
+        self.assertTrue(
+            C.evaluate("github.base_ref == 'main'", C.PULL_REQUEST, C.PULL_REFS[0])
+        )
+
+    def test_the_event_name_is_the_name_of_the_event(self):
+        self.assertTrue(C.evaluate("github.event_name == 'push'", C.PUSH, "refs/heads/main"))
+        self.assertFalse(C.evaluate("github.event_name == 'push'", C.DISPATCH, "refs/heads/main"))
+        self.assertFalse(
+            C.evaluate("github.event_name == 'push'", C.PULL_REQUEST, C.PULL_REFS[0])
+        )
 
 
 class BrokenWorkflowTest(unittest.TestCase):
@@ -164,6 +195,26 @@ class BrokenWorkflowTest(unittest.TestCase):
         self.assertTrue(failures)
         self.assertTrue(any("refs/heads/other" in failure for failure in failures), failures)
 
+    def test_the_workflow_with_a_guard_that_names_a_tag_fails(self):
+        # A guard that matches the name of a tag is a guard that deploys
+        # on that tag, and the environment rejects a tag.
+        text = workflow_text().replace(
+            GUARD,
+            "    if: github.ref == 'refs/heads/main' || github.ref_type == 'tag'\n",
+        )
+        failures = self.check(text)
+        self.assertTrue(failures)
+        self.assertTrue(any("refs/tags" in failure for failure in failures), failures)
+
+    def test_the_workflow_with_a_guard_that_names_a_tag_by_name_fails(self):
+        text = workflow_text().replace(
+            GUARD,
+            "    if: github.ref == 'refs/heads/main' || github.ref_name == 'v1.0'\n",
+        )
+        failures = self.check(text)
+        self.assertTrue(failures)
+        self.assertTrue(any("refs/tags/v1.0" in failure for failure in failures), failures)
+
     def test_the_workflow_with_a_guard_that_excludes_a_branch_fails(self):
         # A guard that only excludes a branch deploys on every other
         # branch, and the environment rejects those.
@@ -209,6 +260,41 @@ class BrokenWorkflowTest(unittest.TestCase):
         self.assertTrue(failures)
         self.assertTrue(any("cannot be evaluated" in failure for failure in failures), failures)
 
+    def test_the_workflow_with_a_guard_that_uses_a_status_function_fails(self):
+        # always() and failure() make the deploy job run even when the
+        # build failed, and a run of a branch that is then rejected by the
+        # environment is a failed run.
+        text = workflow_text().replace(
+            GUARD,
+            "    if: github.ref == 'refs/heads/main' || failure()\n",
+        )
+        failures = self.check(text)
+        self.assertTrue(failures)
+        self.assertTrue(any("cannot be evaluated" in failure for failure in failures), failures)
+
+    def test_the_workflow_with_a_guard_that_reads_the_head_ref_fails(self):
+        # head_ref is empty on a push, so the guard would not deploy on a
+        # push of main.
+        text = workflow_text().replace(
+            GUARD,
+            "    if: github.head_ref == 'main'\n",
+        )
+        failures = self.check(text)
+        self.assertTrue(failures)
+        self.assertTrue(any("does not deploy" in failure for failure in failures), failures)
+
+    def test_the_workflow_with_a_guard_that_reads_the_event_fails(self):
+        # The deploy job has to deploy on a manual run of main as well.
+        text = workflow_text().replace(
+            GUARD,
+            "    if: github.ref == 'refs/heads/main' && github.event_name == 'push'\n",
+        )
+        failures = self.check(text)
+        self.assertTrue(failures)
+        self.assertTrue(
+            any("workflow_dispatch" in failure for failure in failures), failures
+        )
+
     def test_the_workflow_with_a_guarded_build_job_fails(self):
         text = workflow_text().replace(
             "  build:\n    runs-on: ubuntu-latest\n",
@@ -231,7 +317,24 @@ class BrokenWorkflowTest(unittest.TestCase):
         )
         failures = self.check(text)
         self.assertTrue(failures)
-        self.assertTrue(any("checker" in failure for failure in failures), failures)
+        self.assertTrue(
+            any("check_pages_workflow.py" in failure for failure in failures), failures
+        )
+
+    def test_the_workflow_that_does_not_run_on_a_change_of_the_requirements_fails(self):
+        text = workflow_text().replace(
+            '      - "tools/requirements-python.txt"\n',
+            "",
+        )
+        failures = self.check(text)
+        self.assertTrue(failures)
+        self.assertTrue(any("requirements" in failure for failure in failures), failures)
+
+    def test_the_workflow_that_does_not_run_on_a_change_of_the_tests_fails(self):
+        text = workflow_text().replace('      - "tests/verify/**"\n', "")
+        failures = self.check(text)
+        self.assertTrue(failures)
+        self.assertTrue(any("tests/verify" in failure for failure in failures), failures)
 
     def test_a_workflow_that_is_not_yaml_fails(self):
         failures = self.check("jobs: [\n")

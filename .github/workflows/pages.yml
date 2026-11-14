@@ -19,6 +19,7 @@ on:
       - "tools/web/**"
       - "tools/verify/check_pages_workflow.py"
       - "tests/verify/**"
+      - "tools/requirements-python.txt"
       - ".github/workflows/pages.yml"
 
 permissions:
