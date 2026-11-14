@@ -41,10 +41,21 @@ class CheckerTest(unittest.TestCase):
         text = workflow_text()
         self.assertIn(GUARD, text)
         expression = GUARD.strip()[len("if:"):].strip()
-        for event in C.DEPLOY_EVENTS:
-            self.assertTrue(C.evaluate(expression, event, C.MAIN), event)
-            for ref in C.BRANCH_REFS + C.TAG_REFS:
+        # The events and the refs are written out here on purpose: a test
+        # that takes them from the checker checks the checker against
+        # itself.
+        for event in ("push", "workflow_dispatch"):
+            self.assertTrue(C.evaluate(expression, event, "refs/heads/main"), event)
+            for ref in ("refs/heads/ccr-579fa5e1-azpt7p", "refs/tags/v1.0"):
                 self.assertFalse(C.evaluate(expression, event, ref), f"{event} {ref}")
+
+    def test_the_checker_knows_the_events_of_the_workflow(self):
+        self.assertEqual(("push", "workflow_dispatch"), tuple(C.DEPLOY_EVENTS))
+        self.assertEqual("refs/heads/main", C.MAIN)
+
+    def test_the_checker_knows_a_sample_of_the_refs(self):
+        self.assertTrue(C.BRANCH_REFS)
+        self.assertTrue(C.TAG_REFS)
 
     def test_pyyaml_is_in_the_requirements(self):
         # The checker reads the workflow with PyYAML, so PyYAML has to be in
