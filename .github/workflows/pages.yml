@@ -18,6 +18,7 @@ on:
       - "Makefile"
       - "tools/web/**"
       - "tools/verify/check_pages_workflow.py"
+      - "tests/verify/**"
       - ".github/workflows/pages.yml"
 
 permissions:
@@ -41,9 +42,16 @@ jobs:
         run: |
           # The deploy job is guarded so that only main deploys; the guard is
           # checked here so that a change that breaks it is caught by the
-          # workflow that carries it.
-          python3 -c "import yaml" || python3 -m pip install --quiet pyyaml
+          # workflow that carries it.  The tests of the checker run here as
+          # well, so that a change of the checker that lets a broken guard
+          # through is caught too.
+          #
+          # The checker reads the workflow with PyYAML, which is in
+          # tools/requirements-python.txt.  The runner has it already; the
+          # install is there for the runner that does not.
+          python3 -c "import yaml" || python3 -m pip install --quiet pyyaml || python3 -m pip install --quiet --break-system-packages pyyaml
           python3 tools/verify/check_pages_workflow.py
+          cd tests/verify && python3 -m unittest discover -p 'test_*.py' -v
 
       - name: install the emscripten toolchain
         run: |

@@ -10,6 +10,7 @@
 #  3. the host build is not touched by the patch
 #  4. the host build runs the game at the full frame rate
 #  5. the browser build boots and reads the disc image
+#  6. the Pages workflow only deploys from main
 #
 # Usage: tools/verify/gate.sh [--skip-browser]
 #
@@ -92,6 +93,16 @@ else
     echo
     echo "SKIPPED: the browser build"
 fi
+
+# 6. The Pages workflow only deploys from main.  The deploy job of the
+#    workflow is guarded, and the guard is checked here, so that a change
+#    of the guard that lets a branch deploy is caught before it reaches
+#    the repository.
+run "the Pages workflow only deploys from main" bash -c '
+    set -e
+    python3 tools/verify/check_pages_workflow.py
+    cd tests/verify && python3 -m unittest discover -p "test_*.py" -v
+'
 
 echo
 echo "=============================================================="

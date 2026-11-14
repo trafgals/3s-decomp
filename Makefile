@@ -389,6 +389,13 @@ $(TEST_DIR)/test_upper3s_%: tests/upper3s/test_upper3s_%.c $(UPPER3S_C_FILES)
 
 .PHONY: test
 
+# The tests of the tools of the repository.  They need no game data, and
+# they check the tools themselves.  See tests/verify/README.md.
+verify-test:
+	cd tests/verify && $(PYTHON) -m unittest discover -p 'test_*.py' -v
+
+.PHONY: verify-test
+
 # Build SDL3 for the web target. Emscripten has no SDL3 port of its own, so
 # SDL3 is compiled from source with its Emscripten backend.
 SDL3_VERSION := release-3.4.2
